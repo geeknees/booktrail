@@ -1,3 +1,9 @@
+<% unless @session.completed? || @session.failed? %><% content_for :head do %><meta http-equiv="refresh" content="3"><% end %><% end %>
+<% if @session.pending? || @session.processing? %>
+  <section class="page-heading generation-status"><p class="eyebrow">Finding your next trail</p><h1>推薦を準備しています</h1><p>読書履歴を3つの方法で読み解いています。この画面は自動で更新されます。</p><span class="loading-mark" aria-hidden="true"></span></section>
+<% elsif @session.failed? %>
+  <section class="page-heading generation-status"><p class="eyebrow">Recommendation paused</p><h1>推薦を生成できませんでした</h1><p><%= @session.error_message %></p><div class="actions"><%= link_to 'もう一度試す', new_recommendation_session_path, class: 'button' %></div></section>
+<% else %>
 <section class="page-heading"><p class="eyebrow">Your next trail</p><h1>次の一冊につながる3つの道</h1><p>似ているだけでなく、読み続けられることを大切に選びました。</p></section>
 <div class="recommendations">
   <% labels = {'likely_to_love'=>['きっと好き','Likely to Love'],'easy_to_continue'=>['読み切れそう','Easy to Continue'],'broaden_your_world'=>['世界を広げる','Broaden Your World']} %>
@@ -8,3 +14,4 @@
     </div></article><% end %>
 </div>
 <div class="actions"><%= link_to 'アルゴリズムを比較する', recommendation_session_comparison_path(@session), class: 'text-link' %></div>
+<% end %>

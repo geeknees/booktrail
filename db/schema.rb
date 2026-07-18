@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_18_000003) do
   create_table "books", force: :cascade do |t|
     t.string "author"
     t.json "categories", default: [], null: false
@@ -84,11 +84,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_000002) do
 
   create_table "recommendation_sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.datetime "generated_at", null: false
+    t.text "error_message"
+    t.datetime "generated_at"
     t.json "profile_snapshot", default: {}, null: false
     t.string "reading_goal", null: false
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["status"], name: "index_recommendation_sessions_on_status"
     t.index ["user_id"], name: "index_recommendation_sessions_on_user_id"
   end
 

@@ -8,13 +8,14 @@ class RecommendationSessionsController < ApplicationController
     return render(:new, status: :unprocessable_content) unless RecommendationSession::GOALS.include?(goal)
 
     profile = ReadingProfileGenerator.new(user: current_user).call
-    session = RecommendationEngine.new(user: current_user, profile:, goal:).call
+    session = current_user.recommendation_sessions.create!(reading_goal: goal, profile_snapshot: profile.snapshot)
+    RecommendationGenerationJob.perform_later(session)
     redirect_to session
   end
 
   def show
     @session = current_user.recommendation_sessions.find(params[:id])
-    recommendations = @session.recommendations.where(algorithm: "qmd_hybrid").includes(:book, :feedbacks)
+    recommendations = @session.completed? ? @session.recommendations.where(algorithm: "qmd_hybrid").includes(:book, :feedbacks) : Recommendation.none
     @recommendations = recommendations.sort_by { |recommendation| [ Recommendation::CATEGORIES.index(recommendation.category), recommendation.rank ] }
   end
 end

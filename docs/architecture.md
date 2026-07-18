@@ -16,12 +16,15 @@ The MVP has deterministic local scoring and a QMD CLI adapter. A future `Collabo
 
 ## Ranking stages
 
-1. Build separate queries for `likely_to_love`, `easy_to_continue`, and `broaden_your_world`.
-2. Generate candidates for each algorithm.
-3. Exclude imported books and books marked `already_read`, `not_for_me`, or `want_to_read`.
-4. Compute final score: relevance 45%, reading-pattern fit 20%, current-goal fit 15%, novelty 10%, diversity 10%.
-5. Penalize incomplete metadata and limit repeated authors.
-6. Prevent a book from occupying two reader-facing categories in one algorithm.
+1. Persist a pending recommendation session and enqueue `RecommendationGenerationJob` through Solid Queue.
+2. Build separate queries for `likely_to_love`, `easy_to_continue`, and `broaden_your_world`.
+3. Generate candidates for each algorithm outside the web request.
+4. Exclude imported books and books marked `already_read`, `not_for_me`, or `want_to_read`.
+5. Compute final score: relevance 45%, reading-pattern fit 20%, current-goal fit 15%, novelty 10%, diversity 10%.
+6. Penalize incomplete metadata and limit repeated authors.
+7. Prevent a book from occupying two reader-facing categories in one algorithm, then mark the session completed.
+
+Pending and processing sessions show a polling page, completed sessions expose recommendations, and failed sessions retain only a reader-safe error message. A retried job never duplicates completed recommendations. Development uses the same durable Solid Queue adapter as production, backed by a separate SQLite database.
 
 The explanation generator uses only stored facts: shared categories, page counts, and the inferred preference snapshot. Internal scores never become reader-facing prose.
 

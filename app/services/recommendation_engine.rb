@@ -9,9 +9,11 @@ class RecommendationEngine
     @goal = goal
   end
 
-  def call
-    session = @user.recommendation_sessions.create!(reading_goal: @goal, profile_snapshot: @profile.snapshot, generated_at: Time.current)
+  def call(session: nil)
+    session ||= @user.recommendation_sessions.create!(reading_goal: @goal, profile_snapshot: @profile.snapshot)
+    session.recommendations.destroy_all
     Recommendation::ALGORITHMS.each { |algorithm| generate_algorithm(session, algorithm) }
+    session.update!(status: "completed", generated_at: Time.current, error_message: nil)
     session
   end
 

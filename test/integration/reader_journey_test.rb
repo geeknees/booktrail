@@ -19,9 +19,21 @@ class ReaderJourneyTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", /読書プロフィール/
 
-    post recommendation_sessions_path, params: { recommendation_session: { reading_goal: "same_pace" } }
+    assert_enqueued_with(job: RecommendationGenerationJob) do
+      post recommendation_sessions_path, params: { recommendation_session: { reading_goal: "same_pace" } }
+    end
     assert_response :redirect
     session = RecommendationSession.last
+    assert_predicate session, :pending?
+
+    get recommendation_session_path(session)
+    assert_response :success
+    assert_select "h1", /推薦を準備しています/
+
+    get recommendation_session_comparison_path(session)
+    assert_redirected_to recommendation_session_path(session)
+
+    perform_enqueued_jobs(only: RecommendationGenerationJob)
     get recommendation_session_path(session)
     assert_response :success
     assert_select ".recommendation-card", count: 3

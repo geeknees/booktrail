@@ -31,11 +31,11 @@ Railsモノリスの中で、変わりやすい外部境界だけを分離して
 Booklog CSV → BooklogCsvImporter → Book / ReadingRecord
                                   └→ BookMetadataJob → openBD → Google Books
 ReadingRecord → ReadingProfileGenerator → ReadingProfile
-ReadingProfile + Goal
-  ├→ Vector Only → qmd vsearch
-  ├→ BM25 + Vector → qmd search + vsearch → RRF
-  └→ QMD Hybrid → qmd query（Query Expansion + RRF + Reranker）
-                          └→ 障害時は各方式のFallback
+ReadingProfile + Goal → RecommendationGenerationJob（Solid Queue）
+                         ├→ Vector Only → qmd vsearch
+                         ├→ BM25 + Vector → qmd search + vsearch → RRF
+                         └→ QMD Hybrid → qmd query（Query Expansion + RRF + Reranker）
+                                              └→ 障害時は各方式のFallback
                 ↓
        RecommendationEngine
       関連度45% + 読了傾向20% + 目的15% + 新規性10% + 多様性10%
@@ -63,15 +63,16 @@ bin/rails db:seed
 bin/dev
 ```
 
-ブラウザで `http://localhost:3000` を開きます。認証を省いたMVPのため、単一のデモユーザーを使用します。
+ブラウザで `http://localhost:3000` を開きます。認証を省いたMVPのため、単一のデモユーザーを使用します。`bin/dev` はPumaとSolid Queueワーカーを一緒に起動し、時間のかかる推薦生成中もWebリクエストを待たせません。Queueは `storage/development_queue.sqlite3` に永続化されます。
 
 ## デモ手順
 
 1. `bin/rails db:seed` で30冊の推薦カタログを作る
 2. `/imports/new` で [sample/booklog_sample.csv](sample/booklog_sample.csv) をアップロードする（日本語書籍中心・22件）
 3. 取込結果と読書プロフィールを見る
-4. 今回の読書目的を選び、3つの推薦を見る
-5. フィードバックを送り、アルゴリズム比較とスコア詳細を開く
+4. 今回の読書目的を選ぶ（生成中画面は3秒ごとに自動更新される）
+5. 3つの推薦を見る
+6. フィードバックを送り、アルゴリズム比較とスコア詳細を開く
 
 サンプルCSVの想定列は `ISBN, タイトル, 著者, 評価, 読書状況, カテゴリ, タグ, 登録日, 読了日` です。タイトルは必須、ISBNは任意です。実ファイルの列名揺れにも一部対応します。同一ユーザー・同一ISBN（ISBNなしはタイトル＋著者）は再取込時に更新またはスキップします。
 
@@ -94,6 +95,12 @@ qmd collection add tmp/qmd/books --name booktrail
 qmd update
 qmd embed
 BOOKTRAIL_QMD=1 bin/dev
+```
+
+通常は `bin/dev` 内でSolid Queueも起動します。Webとワーカーを分けて確認したい場合は、別ターミナルで次を実行します。
+
+```bash
+BOOKTRAIL_QMD=1 bin/jobs start
 ```
 
 `qmd init` によりプロジェクトローカルの `.qmd/` にインデックスが作られます。このディレクトリと生成MarkdownはGit管理外です。書籍更新後は `bin/rails qmd:documents && qmd update && qmd embed` を実行します。Embeddingモデルを変えた場合、既存ベクトルに互換性がないため必ず再生成します。
@@ -152,6 +159,7 @@ API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウ
 - ISBNからシリーズ情報を安定取得できないため、タイトルの巻数表記による保守的なシリーズ判定です
 - QMD CLI JSONの `--explain` 項目はバージョン差を許容し、欠落値は開発者画面で `—` と表示します
 - QMDモードはローカルモデルを同期実行するため、初回ダウンロード時やCPU環境では推薦生成に時間がかかります
+- 推薦はSolid Queueで非同期生成しますが、MVPでは進捗率ではなく pending／processing／completed／failed の状態表示です
 - 書影URLは外部配信元に依存します。欠落時はローカルのプレースホルダーを表示します
 
 ## 将来の協調フィルタリング

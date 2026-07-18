@@ -1,31 +1,175 @@
-# Files in the config/locales directory are used for internationalization and
-# are automatically loaded by Rails. If you want to use locales other than
-# English, add the necessary files in this directory.
-#
-# To use the locales, use `I18n.t`:
-#
-#     I18n.t "hello"
-#
-# In views, this is aliased to just `t`:
-#
-#     <%= t("hello") %>
-#
-# To use a different locale, set it with `I18n.locale`:
-#
-#     I18n.locale = :es
-#
-# This would use the information in config/locales/es.yml.
-#
-# To learn more about the API, please read the Rails Internationalization guide
-# at https://guides.rubyonrails.org/i18n.html.
-#
-# Be aware that YAML interprets the following case-insensitive strings as
-# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
-# must be quoted to be interpreted as strings. For example:
-#
-#     en:
-#       "yes": yup
-#       enabled: "ON"
-
 en:
-  hello: "Hello world"
+  support:
+    list_separator: ", "
+  locales:
+    label: "Language"
+    switch: "Switch"
+    ja: "日本語"
+    en: "English"
+  layout:
+    import: "Import history"
+    profile: "Profile"
+    find_books: "Find a book"
+    footer: "Your history, for your next book."
+  home:
+    lead: "Turn your reading history into a map for what to read next."
+    local_lead: "Let the trail of books you have read lead to the one you will want to read next."
+    import: "Import Booklog CSV"
+    find_books: "Find your next book"
+    principle: "The best recommendation is not merely the most similar book.<br>It is the book that helps the reader keep reading."
+    steps:
+      history:
+        title: "Connect your history"
+        body: "Turn ratings and completion patterns into clues for the next book, not just a record of the past."
+      goal:
+        title: "Choose by purpose"
+        body: "Whether you want something light or a wider world, your current intention matters."
+      reason:
+        title: "Understand why"
+        body: "See why each book was selected using facts from your own reading history."
+  imports:
+    new:
+      eyebrow: "Import"
+      title: "Import your reading trail"
+      description: "Choose a CSV exported from Booklog. The uploaded file is not retained after processing."
+      requirements: "CSV only, up to 5 MB. UTF-8, UTF-8 with BOM, and Shift_JIS are supported."
+      submit: "Import history"
+      fields_title: "Information imported"
+      fields: "ISBN, title, author, rating, reading status, category, tags, registration date, and completion date. Review text is not used for recommendations."
+    show:
+      eyebrow: "Import complete"
+      title: "Import results"
+      success: "Imported"
+      skipped: "Skipped"
+      errors: "Errors"
+      row_errors: "Rows to review"
+      row: "Row %{line}: %{message}"
+      profile: "View reading profile"
+      another: "Import another CSV"
+  profiles:
+    eyebrow: "Your reading trail"
+    title: "Reading profile"
+    description: "Estimated preferences and completion patterns visible in your history."
+    outline: "Your reading outline so far"
+    topics: "Topics of interest"
+    authors: "Frequently read authors"
+    readability: "Ease-of-reading pattern"
+    add_history: "Add history to see this"
+    unknown: "Not enough information yet"
+    average_pages: "Completed books average about %{count} pages"
+    choose_goal: "Choose this reading goal"
+    delete: "Delete reading history"
+    confirm_delete: "Delete your history and recommendation data?"
+  goals:
+    page:
+      eyebrow: "Reading goal"
+      title: "What would you like to read now?"
+      description: "The same history can lead to a different next book depending on your current purpose."
+      submit: "Create recommendations"
+    light:
+      title: "Something light and enjoyable"
+      description: "Focus on books that are easy to start"
+    same_pace:
+      title: "Something like my usual reading"
+      description: "Build on lengths and themes you often finish"
+    challenge:
+      title: "A slightly harder challenge"
+      description: "Go one step deeper from an existing interest"
+    explore:
+      title: "Explore a new field"
+      description: "Keep a point of connection while entering unfamiliar territory"
+  recommendations:
+    pending:
+      eyebrow: "Finding your next trail"
+      title: "Preparing recommendations"
+      description: "We are reading your history in three different ways. This page refreshes automatically."
+    failed:
+      eyebrow: "Recommendation paused"
+      title: "Recommendations could not be generated"
+      retry: "Try again"
+    result:
+      eyebrow: "Your next trail"
+      title: "Three paths to your next book"
+      description: "Selected to help you keep reading, not merely because they are similar."
+      reason: "Why this book"
+      compare: "Compare algorithms"
+    categories:
+      likely_to_love:
+        title: "Likely to Love"
+        subtitle: "Close to your favorites"
+      easy_to_continue:
+        title: "Easy to Continue"
+        subtitle: "Fits your reading patterns"
+      broaden_your_world:
+        title: "Broaden Your World"
+        subtitle: "A connected new direction"
+    feedback:
+      want_to_read: "Want to read"
+      maybe_later: "Maybe later"
+      not_for_me: "Not for me"
+      already_read: "Already read"
+  comparison:
+    eyebrow: "Algorithm lab"
+    title: "Recommendation algorithm comparison"
+    question: "Which recommendation method understands this reader best?"
+    category: "Recommendation type"
+    vector_only: "Vector Only"
+    bm25_vector: "BM25 + Vector"
+    qmd_hybrid: "QMD Hybrid + Reranker"
+    details: "Score details"
+    no_candidate: "No candidate"
+    back: "Back to recommendations"
+  developer:
+    eyebrow: "Developer details"
+    title: "Scores for %{title}"
+    description: "Ranking and retrieval scores for validation; these are hidden from the standard reader view."
+    fields:
+      algorithm: "Algorithm"
+      backend: "Backend"
+      original_rank: "Original rank"
+      final_rank: "Final rank"
+      reading_pattern_fit: "Reading pattern fit"
+      goal_fit: "Goal fit"
+      novelty: "Novelty"
+      diversity: "Diversity"
+      feedback_fit: "Feedback fit"
+      final_score: "Final score"
+      query_expansion: "Query expansion"
+  notices:
+    history_deleted: "Reading history and recommendation data were deleted."
+    feedback_saved: "Your feedback was saved."
+    recommendation_pending: "Please wait until recommendation generation is complete."
+  errors:
+    upload_required: "Choose a valid CSV file up to 5 MB."
+    title_missing: "Title is missing"
+    isbn_invalid: "ISBN is invalid"
+  jobs:
+    recommendation_failed: "Recommendations could not be generated. Please try again."
+  profile_summary:
+    interests: "Your history suggests an interest in %{items}."
+    authors: "You often enjoy books by %{items}."
+    pages: "Completed books average about %{count} pages."
+    empty: "As your history grows, estimated preferences and completion patterns will become more detailed."
+  recommendation_explanations:
+    favorite_author: "Selected as an unread book by %{author}, an author you read often."
+    similar_length: "At %{pages} pages, it is close to the roughly %{typical}-page books you often finish."
+    shared_theme_easy: "It shares themes with books you have completed, making it an approachable next choice."
+    broaden_shared: "It uses your interest in %{topic} as an entry point to a different perspective."
+    broaden_new: "It offers a new field just beyond your usual interests."
+    love_shared: "It shares the theme %{topic} with books you rated highly."
+    love_profile: "Its description connects with your estimated preferences."
+  recommendation_query:
+    profile: "Reader profile: %{summary}"
+    goal: "Current reading goal: %{goal}"
+    intent: "Recommendation intent: %{intent}"
+    preferences: "Estimated preferences: %{items}"
+    authors: "Frequently read authors: %{items}"
+    categories: "Frequently read categories: %{items}"
+    highly_rated: "Highly rated completed books:"
+    recent: "Recently completed books:"
+    wanted: "Books marked want to read: %{items}"
+    rejected: "Books marked not for me; avoid close matches: %{items}"
+    intents:
+      likely_to_love: "Books close in theme, tone, authorship, or narrative structure to highly rated books"
+      easy_to_continue: "Books close to completed books in length, complexity, genre, and voice"
+      broaden_your_world: "Books connected to core interests but different in genre, era, region, author, or viewpoint"

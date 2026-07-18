@@ -52,12 +52,12 @@ class BooklogCsvImporter
     return if values.values.compact.empty?
 
     title = value(values, :title)
-    raise ArgumentError, "タイトルがありません" if title.blank?
+    raise ArgumentError, I18n.t("errors.title_missing") if title.blank?
 
     raw_isbn = value(values, :isbn)
     isbn = Book.normalize_isbn(raw_isbn)
     isbn ||= Book.normalize_isbn(values["商品ID"]) if @headerless
-    raise ArgumentError, "ISBNが不正です" if !@headerless && raw_isbn.present? && isbn.nil?
+    raise ArgumentError, I18n.t("errors.isbn_invalid") if !@headerless && raw_isbn.present? && isbn.nil?
 
     book = find_or_create_book(
       isbn:, title:, author: value(values, :author), categories: split(value(values, :categories)),

@@ -92,19 +92,19 @@ class RecommendationEngine
 
   def explanation(book, category)
     shared = book.categories & @profile.preferred_categories
-    return "よく読んでいる#{book.author}の未読作品から選びました。" if book.author.present? && @profile.favorite_authors.include?(book.author)
+    return I18n.t("recommendation_explanations.favorite_author", author: book.author) if book.author.present? && @profile.favorite_authors.include?(book.author)
 
     case category
     when "easy_to_continue"
       if book.page_count && @profile.typical_page_count
-        "よく読み切っている本の長さ（約#{@profile.typical_page_count}ページ）に近い#{book.page_count}ページの本です。"
+        I18n.t("recommendation_explanations.similar_length", typical: @profile.typical_page_count, pages: book.page_count)
       else
-        "これまで読了した本と共通するテーマがあり、読み進めやすい候補です。"
+        I18n.t("recommendation_explanations.shared_theme_easy")
       end
     when "broaden_your_world"
-      shared.any? ? "関心のある#{shared.first}を入口に、これまでと異なる視点へ広げられる本です。" : "普段の関心から一歩外へ広がる、新しい分野の候補です。"
+      shared.any? ? I18n.t("recommendation_explanations.broaden_shared", topic: shared.first) : I18n.t("recommendation_explanations.broaden_new")
     else
-      shared.any? ? "高く評価した本と#{shared.first}というテーマが共通しています。" : "推定される好みと内容紹介に接点がある本です。"
+      shared.any? ? I18n.t("recommendation_explanations.love_shared", topic: shared.first) : I18n.t("recommendation_explanations.love_profile")
     end
   end
 end

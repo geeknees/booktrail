@@ -8,7 +8,7 @@ class ImportsController < ApplicationController
 
   def create
     upload = params.dig(:import, :file)
-    return render_invalid("CSVファイルを選択してください。") unless valid_upload?(upload)
+    return render_invalid(t("errors.upload_required")) unless valid_upload?(upload)
 
     @import = BooklogCsvImporter.new(user: current_user, file: upload.tempfile, filename: upload.original_filename).call
     ReadingProfileGenerator.new(user: current_user).call unless @import.status == "failed"

@@ -5,18 +5,27 @@ class RecommendationGenerationJob < ApplicationJob
   limits_concurrency to: 1, key: ->(_session) { "recommendation-generation" }, duration: 10.minutes
 
   def perform(session)
+    I18n.with_locale(locale_for(session.user)) { generate(session) }
+  rescue StandardError
+    session.update!(status: "failed", error_message: I18n.t("jobs.recommendation_failed", locale: locale_for(session.user))) if session&.persisted?
+    raise
+  end
+
+  private
+
+  def generate(session)
     return if session.completed?
 
     session.update!(status: "processing", started_at: Time.current, error_message: nil)
     profile = ReadingProfileGenerator.new(user: session.user).call
     refresh_catalog(profile)
     RecommendationEngine.new(user: session.user, profile:, goal: session.reading_goal).call(session:)
-  rescue StandardError
-    session.update!(status: "failed", error_message: "推薦を生成できませんでした。もう一度お試しください。") if session&.persisted?
-    raise
   end
 
-  private
+  def locale_for(user)
+    locale = user.locale.to_s
+    I18n.available_locales.map(&:to_s).include?(locale) ? locale : I18n.default_locale
+  end
 
   def refresh_catalog(profile)
     return if ENV.fetch("BOOKTRAIL_CATALOG_DISCOVERY", "1") == "0"

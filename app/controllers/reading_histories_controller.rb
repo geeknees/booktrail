@@ -8,6 +8,6 @@ class ReadingHistoriesController < ApplicationController
       current_user.reading_records.destroy_all
       current_user.imports.destroy_all
     end
-    redirect_to root_path, notice: "読書履歴と推薦データを削除しました。"
+    redirect_to root_path, notice: t("notices.history_deleted")
   end
 end

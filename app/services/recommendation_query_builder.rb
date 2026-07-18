@@ -1,17 +1,6 @@
 # ABOUTME: Builds bounded search queries from concrete reading-history evidence.
 # ABOUTME: Keeps current goal and each recommendation intent explicit for QMD.
 class RecommendationQueryBuilder
-  INTENT_CONTEXTS = {
-    "likely_to_love" => "高評価した本とテーマ、雰囲気、著者性、物語構造が近い本",
-    "easy_to_continue" => "読了した本と長さ、複雑さ、ジャンル、語り口が近い本",
-    "broaden_your_world" => "主な興味と接点があり、異なるジャンル、時代、地域、著者、観点を持つ本"
-  }.freeze
-  GOAL_CONTEXTS = {
-    "light" => "気軽に楽しみたい",
-    "same_pace" => "いつもと同じくらいの本を読みたい",
-    "challenge" => "少し難しい本に挑戦したい",
-    "explore" => "新しい分野を開拓したい"
-  }.freeze
   EXAMPLE_LIMIT = 8
   QUERY_LIMIT = 3_800
 
@@ -24,10 +13,10 @@ class RecommendationQueryBuilder
 
   def call
     sections = [
-      "読者プロフィール: #{@profile.summary}",
+      I18n.t("recommendation_query.profile", summary: @profile.summary),
       preference_section,
-      "今回の読書目的: #{GOAL_CONTEXTS.fetch(@goal, @goal)}",
-      "推薦意図: #{INTENT_CONTEXTS.fetch(@intent, @intent)}",
+      I18n.t("recommendation_query.goal", goal: I18n.t("goals.#{@goal}.title", default: @goal)),
+      I18n.t("recommendation_query.intent", intent: I18n.t("recommendation_query.intents.#{@intent}", default: @intent)),
       examples_section,
       recent_section,
       feedback_section
@@ -45,9 +34,10 @@ class RecommendationQueryBuilder
 
   def preference_section
     lines = []
-    lines << "推定される好み: #{@profile.favorite_topics.first(6).join('、')}" if @profile.favorite_topics.any?
-    lines << "よく読む著者: #{@profile.favorite_authors.first(5).join('、')}" if @profile.favorite_authors.any?
-    lines << "よく読むカテゴリ: #{@profile.preferred_categories.first(6).join('、')}" if @profile.preferred_categories.any?
+    separator = I18n.t("support.list_separator")
+    lines << I18n.t("recommendation_query.preferences", items: @profile.favorite_topics.first(6).join(separator)) if @profile.favorite_topics.any?
+    lines << I18n.t("recommendation_query.authors", items: @profile.favorite_authors.first(5).join(separator)) if @profile.favorite_authors.any?
+    lines << I18n.t("recommendation_query.categories", items: @profile.preferred_categories.first(6).join(separator)) if @profile.preferred_categories.any?
     lines.join("\n").presence
   end
 
@@ -55,7 +45,7 @@ class RecommendationQueryBuilder
     records = positive_records.first(EXAMPLE_LIMIT)
     return if records.empty?
 
-    "高く評価して読み終えた本:\n" + records.map { |record| "- #{book_evidence(record.book)}" }.join("\n")
+    I18n.t("recommendation_query.highly_rated") + "\n" + records.map { |record| "- #{book_evidence(record.book)}" }.join("\n")
   end
 
   def positive_records
@@ -68,7 +58,7 @@ class RecommendationQueryBuilder
     records = @user.reading_records.includes(:book).where.not(finished_at: nil).order(finished_at: :desc).limit(4)
     return if records.empty?
 
-    "最近読み終えた本:\n" + records.map { |record| "- #{record.book.title} / #{record.book.author}" }.join("\n")
+    I18n.t("recommendation_query.recent") + "\n" + records.map { |record| "- #{record.book.title} / #{record.book.author}" }.join("\n")
   end
 
   def feedback_section
@@ -77,8 +67,9 @@ class RecommendationQueryBuilder
     return if wanted.empty? && rejected.empty?
 
     lines = []
-    lines << "読みたいと反応した本: #{wanted.map(&:title).join('、')}" if wanted.any?
-    lines << "合わないと反応した本（類似候補を避ける）: #{rejected.map(&:title).join('、')}" if rejected.any?
+    separator = I18n.t("support.list_separator")
+    lines << I18n.t("recommendation_query.wanted", items: wanted.map(&:title).join(separator)) if wanted.any?
+    lines << I18n.t("recommendation_query.rejected", items: rejected.map(&:title).join(separator)) if rejected.any?
     lines.join("\n")
   end
 

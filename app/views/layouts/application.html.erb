@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= I18n.locale %>">
   <head>
     <title><%= content_for(:title) || "Booktrail" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -26,10 +26,12 @@
   <body>
     <header class="site-header">
       <%= link_to root_path, class: 'brand' do %><span>Booktrail</span><small>One Book Leads to Another</small><% end %>
-      <nav><%= link_to '履歴を取り込む', new_import_path %><%= link_to 'プロフィール', reading_profile_path %><%= link_to '本を探す', new_recommendation_session_path, class: 'button button-small' %></nav>
+      <nav><%= link_to t('layout.import'), new_import_path %><%= link_to t('layout.profile'), reading_profile_path %><%= link_to t('layout.find_books'), new_recommendation_session_path, class: 'button button-small' %>
+        <%= form_with url: locale_path, method: :patch, class: 'locale-form' do %><%= label_tag :locale, t('locales.label') %><%= select_tag :locale, options_for_select(available_locales.map { |locale| [t("locales.#{locale}"), locale] }, I18n.locale.to_s) %><%= submit_tag t('locales.switch') %><% end %>
+      </nav>
     </header>
     <% flash.each do |type, message| %><div class="flash <%= type %>"><%= message %></div><% end %>
     <main><%= yield %></main>
-    <footer><p>あなたの履歴は、あなたの次の一冊のために。</p></footer>
+    <footer><p><%= t('layout.footer') %></p></footer>
   </body>
 </html>

@@ -41,9 +41,9 @@ class ReadingProfileGenerator
   def summary_for(topics, categories, authors, pages)
     parts = []
     interests = categories.presence || topics
-    parts << "#{interests.first(3).join('、')}に関心がある傾向です。" if interests.any?
-    parts << "#{authors.first(2).join('、')}の本をよく楽しんでいます。" if authors.any?
-    parts << "読了した本は平均約#{pages}ページです。" if pages
-    parts.presence&.join(" ") || "履歴が増えると、推定される好みと読了傾向が詳しくなります。"
+    parts << I18n.t("profile_summary.interests", items: interests.first(3).join(I18n.t("support.list_separator"))) if interests.any?
+    parts << I18n.t("profile_summary.authors", items: authors.first(2).join(I18n.t("support.list_separator"))) if authors.any?
+    parts << I18n.t("profile_summary.pages", count: pages) if pages
+    parts.presence&.join(" ") || I18n.t("profile_summary.empty")
   end
 end

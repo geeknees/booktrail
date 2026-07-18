@@ -8,4 +8,5 @@ class User < ApplicationRecord
   has_many :recommendation_sessions, dependent: :destroy
 
   validates :name, presence: true
+  validates :locale, inclusion: { in: ->(_user) { I18n.available_locales.map(&:to_s) } }, allow_nil: true
 end

@@ -1,7 +1,7 @@
-<section class="page-heading"><p class="eyebrow">Import</p><h1>読書の軌跡を取り込む</h1><p>ブクログからエクスポートしたCSVを選んでください。ファイルは処理後に保存しません。</p></section>
+<section class="page-heading"><p class="eyebrow"><%= t('imports.new.eyebrow') %></p><h1><%= t('imports.new.title') %></h1><p><%= t('imports.new.description') %></p></section>
 <%= form_with url: imports_path, scope: :import, class: 'upload-panel' do |form| %>
   <%= form.file_field :file, accept: '.csv,text/csv', required: true %>
-  <p>CSVのみ・最大5MB。UTF-8、BOM付きUTF-8、Shift_JISに対応。</p>
-  <%= form.submit '履歴を取り込む', class: 'button' %>
+  <p><%= t('imports.new.requirements') %></p>
+  <%= form.submit t('imports.new.submit'), class: 'button' %>
 <% end %>
-<aside class="note"><h2>取り込む情報</h2><p>ISBN、タイトル、著者、評価、読書状況、カテゴリ、タグ、登録日、読了日。レビュー本文は推薦に使用しません。</p></aside>
+<aside class="note"><h2><%= t('imports.new.fields_title') %></h2><p><%= t('imports.new.fields') %></p></aside>

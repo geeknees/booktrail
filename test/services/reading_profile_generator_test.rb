@@ -35,4 +35,15 @@ class ReadingProfileGeneratorTest < ActiveSupport::TestCase
     assert_includes profile.favorite_topics, "宇宙"
     assert_includes profile.summary, "宇宙"
   end
+
+  test "generates the profile summary in the active locale" do
+    user = User.create!(name: "Reader", locale: "en")
+    book = Book.create!(title: "Science Story", author: "Author", categories: [ "Science" ], page_count: 300)
+    user.reading_records.create!(book:, rating: 5, reading_status: "読了")
+
+    profile = I18n.with_locale(:en) { ReadingProfileGenerator.new(user:).call }
+
+    assert_includes profile.summary, "Science"
+    assert_includes profile.summary, "pages"
+  end
 end

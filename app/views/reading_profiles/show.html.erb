@@ -1,5 +1,5 @@
-<section class="page-heading"><p class="eyebrow">Your reading trail</p><h1>読書プロフィール</h1><p>履歴から見える、推定される好みと読了傾向です。</p></section>
-<section class="profile-card"><h2>いま見えている読書の輪郭</h2><p class="profile-summary"><%= @profile.summary %></p>
-  <div class="profile-grid"><div><h3>関心のあるテーマ</h3><p><%= @profile.favorite_topics.join(' · ').presence || '履歴を追加すると表示されます' %></p></div><div><h3>よく読む著者</h3><p><%= @profile.favorite_authors.join(' · ').presence || 'まだ推定できません' %></p></div><div><h3>読みやすさの傾向</h3><p><%= @profile.typical_page_count ? "読了本は平均約#{@profile.typical_page_count}ページ" : 'まだ推定できません' %></p></div></div>
+<section class="page-heading"><p class="eyebrow"><%= t('profiles.eyebrow') %></p><h1><%= t('profiles.title') %></h1><p><%= t('profiles.description') %></p></section>
+<section class="profile-card"><h2><%= t('profiles.outline') %></h2><p class="profile-summary"><%= @profile.summary %></p>
+  <div class="profile-grid"><div><h3><%= t('profiles.topics') %></h3><p><%= @profile.favorite_topics.join(' · ').presence || t('profiles.add_history') %></p></div><div><h3><%= t('profiles.authors') %></h3><p><%= @profile.favorite_authors.join(' · ').presence || t('profiles.unknown') %></p></div><div><h3><%= t('profiles.readability') %></h3><p><%= @profile.typical_page_count ? t('profiles.average_pages', count: @profile.typical_page_count) : t('profiles.unknown') %></p></div></div>
 </section>
-<div class="actions"><%= link_to '今回の読書目的を選ぶ', new_recommendation_session_path, class: 'button' %><%= button_to '読書履歴を削除', reading_history_path, method: :delete, class: 'danger-link', form: { data: { turbo_confirm: '履歴と推薦データを削除しますか？' } } %></div>
+<div class="actions"><%= link_to t('profiles.choose_goal'), new_recommendation_session_path, class: 'button' %><%= button_to t('profiles.delete'), reading_history_path, method: :delete, class: 'danger-link', form: { data: { turbo_confirm: t('profiles.confirm_delete') } } %></div>

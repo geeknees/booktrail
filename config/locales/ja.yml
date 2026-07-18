@@ -1,0 +1,175 @@
+ja:
+  support:
+    list_separator: "、"
+  locales:
+    label: "言語"
+    switch: "切り替え"
+    ja: "日本語"
+    en: "English"
+  layout:
+    import: "履歴を取り込む"
+    profile: "プロフィール"
+    find_books: "本を探す"
+    footer: "あなたの履歴は、あなたの次の一冊のために。"
+  home:
+    lead: "Turn your reading history into a map for what to read next."
+    local_lead: "読んできた本の軌跡から、次に読みたくなる一冊へ。"
+    import: "ブクログCSVを取り込む"
+    find_books: "次の一冊を探す"
+    principle: "The best recommendation is not merely the most similar book.<br>It is the book that helps the reader keep reading."
+    steps:
+      history:
+        title: "履歴をつなぐ"
+        body: "評価や読了傾向を、過去の記録ではなく次の本への手がかりにします。"
+      goal:
+        title: "目的から選ぶ"
+        body: "今は気軽に読みたいのか、世界を広げたいのか。その気分を大切にします。"
+      reason:
+        title: "理由がわかる"
+        body: "なぜこの本なのかを、あなたの履歴にある事実から説明します。"
+  imports:
+    new:
+      eyebrow: "Import"
+      title: "読書の軌跡を取り込む"
+      description: "ブクログからエクスポートしたCSVを選んでください。ファイルは処理後に保存しません。"
+      requirements: "CSVのみ・最大5MB。UTF-8、BOM付きUTF-8、Shift_JISに対応。"
+      submit: "履歴を取り込む"
+      fields_title: "取り込む情報"
+      fields: "ISBN、タイトル、著者、評価、読書状況、カテゴリ、タグ、登録日、読了日。レビュー本文は推薦に使用しません。"
+    show:
+      eyebrow: "Import complete"
+      title: "インポート結果"
+      success: "取り込み"
+      skipped: "スキップ"
+      errors: "エラー"
+      row_errors: "確認が必要な行"
+      row: "%{line}行目: %{message}"
+      profile: "読書プロフィールを見る"
+      another: "別のCSVを取り込む"
+  profiles:
+    eyebrow: "Your reading trail"
+    title: "読書プロフィール"
+    description: "履歴から見える、推定される好みと読了傾向です。"
+    outline: "いま見えている読書の輪郭"
+    topics: "関心のあるテーマ"
+    authors: "よく読む著者"
+    readability: "読みやすさの傾向"
+    add_history: "履歴を追加すると表示されます"
+    unknown: "まだ推定できません"
+    average_pages: "読了本は平均約%{count}ページ"
+    choose_goal: "今回の読書目的を選ぶ"
+    delete: "読書履歴を削除"
+    confirm_delete: "履歴と推薦データを削除しますか？"
+  goals:
+    page:
+      eyebrow: "Reading goal"
+      title: "今、どんな本を読みたいですか？"
+      description: "同じ履歴でも、今の目的によって次の一冊は変わります。"
+      submit: "推薦をつくる"
+    light:
+      title: "気軽に楽しみたい"
+      description: "短く入りやすい本を中心に"
+    same_pace:
+      title: "いつもと同じくらいの本を読みたい"
+      description: "よく読み切っている長さやテーマから"
+    challenge:
+      title: "少し難しい本に挑戦したい"
+      description: "関心の延長にある一歩深い本へ"
+    explore:
+      title: "新しい分野を開拓したい"
+      description: "接点を残しながら未知の分野へ"
+  recommendations:
+    pending:
+      eyebrow: "Finding your next trail"
+      title: "推薦を準備しています"
+      description: "読書履歴を3つの方法で読み解いています。この画面は自動で更新されます。"
+    failed:
+      eyebrow: "Recommendation paused"
+      title: "推薦を生成できませんでした"
+      retry: "もう一度試す"
+    result:
+      eyebrow: "Your next trail"
+      title: "次の一冊につながる3つの道"
+      description: "似ているだけでなく、読み続けられることを大切に選びました。"
+      reason: "選んだ理由"
+      compare: "アルゴリズムを比較する"
+    categories:
+      likely_to_love:
+        title: "きっと好き"
+        subtitle: "Likely to Love"
+      easy_to_continue:
+        title: "読み切れそう"
+        subtitle: "Easy to Continue"
+      broaden_your_world:
+        title: "世界を広げる"
+        subtitle: "Broaden Your World"
+    feedback:
+      want_to_read: "読みたい"
+      maybe_later: "あとで"
+      not_for_me: "自分には合わない"
+      already_read: "読んだことがある"
+  comparison:
+    eyebrow: "Algorithm lab"
+    title: "推薦アルゴリズム比較"
+    question: "Which recommendation method understands this reader best?"
+    category: "推薦枠"
+    vector_only: "Vector Only"
+    bm25_vector: "BM25 + Vector"
+    qmd_hybrid: "QMD Hybrid + Reranker"
+    details: "スコア詳細"
+    no_candidate: "候補なし"
+    back: "推薦に戻る"
+  developer:
+    eyebrow: "Developer details"
+    title: "%{title} のスコア"
+    description: "通常画面には表示しない、検証用の順位と検索スコアです。"
+    fields:
+      algorithm: "Algorithm"
+      backend: "Backend"
+      original_rank: "Original rank"
+      final_rank: "Final rank"
+      reading_pattern_fit: "Reading pattern fit"
+      goal_fit: "Goal fit"
+      novelty: "Novelty"
+      diversity: "Diversity"
+      feedback_fit: "Feedback fit"
+      final_score: "Final score"
+      query_expansion: "Query expansion"
+  notices:
+    history_deleted: "読書履歴と推薦データを削除しました。"
+    feedback_saved: "フィードバックを反映しました。"
+    recommendation_pending: "推薦の生成が完了するまでお待ちください。"
+  errors:
+    upload_required: "CSVファイルを選択してください。"
+    title_missing: "タイトルがありません"
+    isbn_invalid: "ISBNが不正です"
+  jobs:
+    recommendation_failed: "推薦を生成できませんでした。もう一度お試しください。"
+  profile_summary:
+    interests: "%{items}に関心がある傾向です。"
+    authors: "%{items}の本をよく楽しんでいます。"
+    pages: "読了した本は平均約%{count}ページです。"
+    empty: "履歴が増えると、推定される好みと読了傾向が詳しくなります。"
+  recommendation_explanations:
+    favorite_author: "よく読んでいる%{author}の未読作品から選びました。"
+    similar_length: "よく読み切っている本の長さ（約%{typical}ページ）に近い%{pages}ページの本です。"
+    shared_theme_easy: "これまで読了した本と共通するテーマがあり、読み進めやすい候補です。"
+    broaden_shared: "関心のある%{topic}を入口に、これまでと異なる視点へ広げられる本です。"
+    broaden_new: "普段の関心から一歩外へ広がる、新しい分野の候補です。"
+    love_shared: "高く評価した本と%{topic}というテーマが共通しています。"
+    love_profile: "推定される好みと内容紹介に接点がある本です。"
+  recommendation_query:
+    profile: "読者プロフィール: %{summary}"
+    goal: "今回の読書目的: %{goal}"
+    intent: "推薦意図: %{intent}"
+    preferences: "推定される好み: %{items}"
+    authors: "よく読む著者: %{items}"
+    categories: "よく読むカテゴリ: %{items}"
+    highly_rated: "高く評価して読み終えた本:"
+    recent: "最近読み終えた本:"
+    wanted: "読みたいと反応した本: %{items}"
+    rejected: "合わないと反応した本（類似候補を避ける）: %{items}"
+    intents:
+      likely_to_love: "高評価した本とテーマ、雰囲気、著者性、物語構造が近い本"
+      easy_to_continue: "読了した本と長さ、複雑さ、ジャンル、語り口が近い本"
+      broaden_your_world: "主な興味と接点があり、異なるジャンル、時代、地域、著者、観点を持つ本"

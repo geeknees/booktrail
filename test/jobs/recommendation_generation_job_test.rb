@@ -37,4 +37,15 @@ class RecommendationGenerationJobTest < ActiveJob::TestCase
 
     assert_equal 9, @session.recommendations.count
   end
+
+  test "generates persisted recommendation explanations in the reader locale" do
+    @user.update!(locale: "en")
+
+    RecommendationGenerationJob.perform_now(@session)
+
+    explanations = @session.recommendations.pluck(:explanation)
+    assert explanations.all?(&:present?)
+    assert explanations.any? { |explanation| explanation.match?(/selected|interest|pages|theme|field|description/i) }
+    refute explanations.any? { |explanation| explanation.match?(/[ぁ-んァ-ヶ]/) }
+  end
 end

@@ -10,6 +10,7 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   root "home#show"
+  resource :locale, only: :update
   resources :imports, only: %i[new create show]
   resource :reading_profile, only: :show
   resource :reading_history, only: :destroy

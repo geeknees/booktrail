@@ -2,6 +2,7 @@
 # ABOUTME: Approximates keyword and semantic signals for reliable demos and tests.
 class FallbackCandidateProvider < RecommendationCandidateProvider
   EXCLUDED_FEEDBACK_TYPES = %w[already_read not_for_me want_to_read].freeze
+  NARRATIVE_PATTERN = /物語|story|narrative/i
   def initialize(algorithm:)
     @algorithm = algorithm
   end
@@ -14,7 +15,7 @@ class FallbackCandidateProvider < RecommendationCandidateProvider
       page_fit = page_fit(book.page_count, profile.typical_page_count)
       novelty = (book.categories & profile.preferred_categories).empty? ? 1.0 : 0.35
       category_overlap = (book.categories & profile.preferred_categories).size.to_f / [ profile.preferred_categories.size, 1 ].max
-      semantic = [ category_overlap * 0.75 + (text.include?("物語") ? 0.2 : 0.05), 1.0 ].min
+      semantic = [ category_overlap * 0.75 + (text.match?(NARRATIVE_PATTERN) ? 0.2 : 0.05), 1.0 ].min
       score = score_for(keyword:, semantic:, page_fit:, novelty:, intent:)
       Candidate.new(book:, score:, details: { "backend" => "fallback", "bm25_score" => keyword.round(3), "vector_score" => semantic.round(3), "reranker_score" => nil, "query_expansion" => intent })
     end.sort_by { |candidate| [ -candidate.score, candidate.book.id ] }.first(limit)

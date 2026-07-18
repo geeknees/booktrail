@@ -2,62 +2,119 @@
 
 ## One Book Leads to Another
 
-Booktrailは、Booklog（ブクログ）の読書履歴を「過去の記録」から「次に読む本へつながる地図」へ変える教育カテゴリ向けWebアプリです。
+[Japanese README](README.ja.md)
+
+> **OpenAI Build Week — Join a global week of building with Codex.**
+
+Booktrail is an education-category web application created for the [OpenAI Build Week Challenge](https://openai.com/build-week/). It turns a Booklog reading-history export from a record of the past into a map for what to read next.
 
 > The best recommendation is not merely the most similar book.
 >
 > It is the book that helps the reader keep reading.
 
-同じ読者に対する Vector Only、BM25 + Vector、QMD Hybrid + Reranker の結果を比較し、どの方式がその読者をよく理解するか検証できます。
+Booktrail compares Vector Only, BM25 + Vector, and QMD Hybrid + Reranker for the same reader and asks:
 
-## MVPでできること
+> Which recommendation method understands this reader best?
 
-- Booklog形式CSVの取込（UTF-8/BOM/Windows-31J、最大5MB）
-- ISBN-10/13検証、列名揺れ、空行、重複、部分エラーへの対応
-- openBD優先、Google Books fallbackによる非同期書誌補完と30日キャッシュ
-- 評価・読書状況を重み付けした読書プロフィール
-- 4つの読書目的と3つの推薦枠
-- 3方式の推薦比較、開発者向けスコア内訳
-- 同意済みの最小化クエリによるGoogle Books候補カタログ拡張
-- 読みたい／あとで／合わない／既読のフィードバック
-- 既読除外、著者偏重抑制、カテゴリ間重複排除、品質・多様性を含むリランキング
-- QMDなしでも動く決定的なFallbackモード
-- 日本語・英語のUI、プロフィール要約、推薦理由、QMD検索意図
-- 読書履歴と派生推薦データの削除
+## The problem
 
-## アーキテクチャ
+Most recommendation systems optimize for clicks, sales, or similarity. Readers need something more practical: a next book that matches their interests, fits how they actually finish books, and supports what they want from reading right now.
 
-Railsモノリスの中で、変わりやすい外部境界だけを分離しています。
+Booktrail combines private reading-history evidence with an explicit reading goal and produces three complementary paths:
+
+- **Likely to Love** — close to highly rated books in theme, tone, authorship, or narrative structure
+- **Easy to Continue** — close to books the reader tends to finish in length, complexity, genre, and voice
+- **Broaden Your World** — connected to existing interests while introducing a different field, era, region, author, or viewpoint
+
+## MVP capabilities
+
+- Import Booklog CSV files up to 5 MB in UTF-8, UTF-8 with BOM, or Windows-31J
+- Support ISBN-10/13 validation, Japanese and English headers, blank rows, duplicates, partial row errors, and Booklog's headerless 17-column export
+- Enrich ISBN metadata asynchronously through openBD first and Google Books as a fallback, with 30-day caching
+- Build a weighted reading profile from ratings, reading status, authors, genres, tags, page counts, and recency
+- Select one of four current reading goals and receive three recommendation types
+- Compare three real retrieval pipelines and inspect developer score details
+- Expand a consented public recommendation catalog to 1,000 books with minimized Google Books queries
+- Save want-to-read, maybe-later, not-for-me, and already-read feedback
+- Exclude read books, reduce author and series concentration, prevent cross-category duplicates, and rerank for relevance, completion fit, goal fit, novelty, and diversity
+- Run without QMD through a deterministic local Fallback mode
+- Switch the UI, profile summaries, recommendation explanations, and QMD query intent between Japanese and English
+- Delete private reading history and all derived recommendation data
+
+## Built with Codex and GPT-5.6
+
+This project was developed interactively with **Codex using GPT-5.6** during OpenAI Build Week. Codex was not used as a one-shot code generator. It acted as an engineering partner across repository discovery, architecture, implementation, debugging, evaluation, privacy review, documentation, and Git handoff.
+
+### How Codex was used
+
+| Workstream | Concrete use in Booktrail | Evidence produced |
+|---|---|---|
+| Product-to-code translation | Converted a detailed Japanese product brief into a Rails monolith with a complete CSV-to-feedback vertical slice | `6b4b9eb` built the MVP across models, controllers, services, views, migrations, fixtures, and tests |
+| Real-data debugging | Reproduced failures against a private Booklog export of roughly 1,100 records, reported only aggregate diagnostics, and added support for headerless 17-column Windows-31J exports | `469b826` added importer compatibility and regression tests without committing the private CSV |
+| Recommendation architecture | Replaced proxy scoring with real `qmd vsearch`, `qmd search`, RRF fusion, and `qmd query --explain`; kept a deterministic fallback for unavailable models | `fd804c1` added the QMD runner, query builder, three candidate paths, score evidence, and tests |
+| Background execution | Traced the web request and moved expensive generation into durable Solid Queue jobs with visible pending, processing, completed, and failed states | `1b07905` added queued generation and retry-safe tests |
+| Privacy-aware catalog discovery | Designed a consent boundary that sends only selected author names and public derived subjects, stores query digests rather than query text, and never sends ratings, reviews, tags, title lists, profile summaries, or raw CSV | `1cda5c9` added Google Books discovery, caching, throttling, QMD refresh, and privacy documentation |
+| API failure investigation | Used direct, minimized API probes to discover that quoted Japanese `inauthor:` syntax returned zero results while the supported unquoted form worked; versioned the cache key to invalidate the failed search shape | `b1ccdf8` records the fix and test update |
+| Evidence-driven scaling | Measured the real candidate bottleneck, corrected Google Books pagination from an assumed 40 to the observed 20 results per page, added reader-independent public seed fields, and grew the catalog from 30 to exactly 1,000 books | `6dde1a1` added bounded pagination, resume-safe page caching, public seed queries, docs, and tests |
+| Recommendation evaluation | Re-indexed all 1,000 books locally, regenerated recommendations from the imported history, and checked category completeness, read-book exclusion, duplicates, backend provenance, and cross-algorithm overlap | The verified session produced 9 recommendations, 0 read-book overlaps, 0 duplicates, and only 1 shared book between Vector Only and QMD Hybrid |
+| Internationalization | Traced locale state through the request, demo user, Solid Queue job, persisted explanations, profile generation, and QMD query construction | `177f314` added Japanese/English localization with integration and service tests |
+| Quality and security gates | Worked test-first on behavioral changes, ran Minitest, RuboCop, Brakeman, Zeitwerk, and local HTTP verification, reviewed diffs from perfectionist and pragmatic perspectives, and ran a privacy scan before each commit | Current baseline: 42 tests, 181 assertions, 0 failures, 0 RuboCop offenses, 0 Brakeman warnings |
+
+### How GPT-5.6 contributed
+
+GPT-5.6 was used for the long-horizon reasoning behind the work rather than as an application runtime dependency:
+
+- Maintained the product, privacy, Rails, QMD, testing, and demo constraints across many implementation iterations
+- Turned observed failures into testable hypotheses, including CSV format mismatches, missing catalog coverage, Google Books rate limits, Japanese query syntax, pagination behavior, and worker environment differences
+- Reasoned across controllers, jobs, services, SQLite data, QMD documents, CLI processes, and user-facing explanations instead of optimizing one isolated file
+- Proposed small reversible patches, wrote regression tests first, executed the application and tools, inspected real outputs, and revised the implementation when evidence contradicted the initial model
+- Preserved a clear human decision boundary: the builder chose product intent, approved external metadata queries, corrected local workflow assumptions, and controlled privacy and commit policy; Codex implemented and verified those decisions
+
+This workflow follows the Codex pattern of giving the agent a goal, context, constraints, and a concrete definition of done, then requiring tests and review rather than accepting generated code without evidence. See the official [Codex best practices](https://learn.chatgpt.com/guides/best-practices.md) and [GPT-5.6 announcement](https://openai.com/index/gpt-5-6/).
+
+### What does not use GPT-5.6 at runtime
+
+Booktrail does **not** send reading profiles to an OpenAI API. Runtime recommendation uses local QMD models—Qwen3 Embedding, Qwen3 Reranker, and QMD query expansion—or the deterministic SQLite Fallback. Codex and GPT-5.6 were the development environment; they are not a hidden recommendation service.
+
+## Architecture
+
+Booktrail is a Rails monolith with explicit boundaries only around volatile external systems.
 
 ```text
 Booklog CSV → BooklogCsvImporter → Book / ReadingRecord
                                   └→ BookMetadataJob → openBD → Google Books
 ReadingRecord → ReadingProfileGenerator → ReadingProfile
-ReadingProfile + Goal → RecommendationGenerationJob（Solid Queue）
-                         ├→ GoogleBooksCatalogDiscovery → 公開候補を追加
-                         │                              └→ QMD差分更新・Embedding
+ReadingProfile + Goal → RecommendationGenerationJob (Solid Queue)
+                         ├→ GoogleBooksCatalogDiscovery → public candidates
+                         │                              └→ QMD refresh + embedding
                          ├→ Vector Only → qmd vsearch
                          ├→ BM25 + Vector → qmd search + vsearch → RRF
-                         └→ QMD Hybrid → qmd query（Query Expansion + RRF + Reranker）
-                                              └→ 障害時は各方式のFallback
+                         └→ QMD Hybrid → qmd query
+                                            ├→ query expansion
+                                            ├→ candidate fusion
+                                            └→ reranker
+                                  └→ per-pipeline Fallback on failure
                 ↓
        RecommendationEngine
-      関連度45% + 読了傾向20% + 目的15% + 新規性10% + 多様性10%
+      relevance 45% + completion fit 20% + goal fit 15%
+      + novelty 10% + diversity 10%
                 ↓
  RecommendationSession / Recommendation / Feedback
 ```
 
-QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目的 + 推薦意図` です。Likely to Love、Easy to Continue、Broaden Your Worldを別々に検索してから、既読・拒否済み候補の除外と多様性制約を適用します。QMDへ索引するのは運営側の推薦カタログと、Google Booksから取得した公開書誌だけです。ユーザーが取り込んだ非公開の読書履歴そのものは検索文書にしません。候補Providerの共通契約は `RecommendationCandidateProvider` にあり、将来の協調フィルタリングを差し込めます。詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
+In QMD, `Document = one book` and `Query = reader profile + current goal + recommendation intent`. Likely to Love, Easy to Continue, and Broaden Your World are searched separately before read/rejected exclusions and diversity constraints are applied.
 
-## 必要環境
+Only the operator catalog and public Google Books metadata are indexed into QMD. Private imported reading-history books are never indexed as recommendation documents. Candidate providers share the `RecommendationCandidateProvider` contract so collaborative filtering can be added later. See [docs/architecture.md](docs/architecture.md) for details.
 
-- Ruby 3.4以上（開発時確認: Ruby 4.0.5）
-- Rails 8.1系
+## Requirements
+
+- Ruby 3.4 or newer; development verified with Ruby 4.0.5
+- Rails 8.1
 - SQLite 3
-- Node.js 22以上（QMDを使う場合のみ）
-- QMD `@tobilu/qmd`（任意）
+- Node.js 22 or newer when using QMD
+- `@tobilu/qmd` when using QMD
 
-## セットアップ
+## Setup
 
 ```bash
 git clone <repository-url>
@@ -67,32 +124,40 @@ bin/rails db:seed
 bin/dev
 ```
 
-ブラウザで `http://localhost:3000` を開きます。認証を省いたMVPのため、単一のデモユーザーを使用します。`bin/dev` はPumaとSolid Queueワーカーを一緒に起動し、時間のかかる推薦生成中もWebリクエストを待たせません。Queueは `storage/development_queue.sqlite3` に永続化されます。
+Open `http://localhost:3000`. The MVP intentionally uses one demo user without authentication. `bin/dev` runs Puma and a Solid Queue worker in the same process. The queue is persisted in `storage/development_queue.sqlite3`.
 
-### 言語切替
+### Language switching
 
-ヘッダーの言語選択で日本語と英語を切り替えられます。選択はデモユーザーの `locale` に保存され、画面表示だけでなく、その後Solid Queueで生成するプロフィール要約、推薦理由、QMD検索意図にも反映されます。書名・著者・カテゴリなど外部書誌とCSV由来の値は原文を保持します。推薦理由はセッション作成時の言語で保存されるため、既存セッションは言語切替だけでは再翻訳されません。別の言語で理由を生成する場合は、切替後に新しい推薦セッションを作成してください。
+Use the header selector to switch between Japanese and English. The selection is stored in the demo user's `locale` and controls the UI, subsequently generated profile summary, recommendation explanations, and QMD query intent. Book titles, authors, categories, and other CSV or external metadata remain in their source language.
 
-## デモ手順
+Explanations are persisted in the language active when a recommendation session is created. Switching the UI does not rewrite an existing session; create a new session after switching to generate explanations in the other language.
 
-1. `bin/rails db:seed` で30冊の推薦カタログを作る
-2. `/imports/new` で [sample/booklog_sample.csv](sample/booklog_sample.csv) をアップロードする（日本語書籍中心・22件）
-3. 取込結果と読書プロフィールを見る
-4. 今回の読書目的を選ぶ（生成中画面は3秒ごとに自動更新される）
-5. 3つの推薦を見る
-6. フィードバックを送り、アルゴリズム比較とスコア詳細を開く
+## Demo flow
 
-サンプルCSVの想定列は `ISBN, タイトル, 著者, 評価, 読書状況, カテゴリ, タグ, 登録日, 読了日` です。タイトルは必須、ISBNは任意です。実ファイルの列名揺れにも一部対応します。同一ユーザー・同一ISBN（ISBNなしはタイトル＋著者）は再取込時に更新またはスキップします。
+1. Run `bin/rails db:seed` to create the initial 30-book catalog.
+2. Upload [sample/booklog_sample.csv](sample/booklog_sample.csv) at `/imports/new`; it contains 22 synthetic, primarily Japanese records.
+3. Review the import result and reading profile.
+4. Choose the current reading goal. The generation page refreshes every three seconds.
+5. Review the three reader-facing recommendations.
+6. Submit feedback, compare all algorithms, and open score details.
 
-Booklogが出力するヘッダーなし・17列・Windows-31J形式にも対応しています。この形式の2列目は紙書籍ではISBN-10、電子書籍ではASINなどの商品IDになるため、有効なISBNの場合だけ書籍識別子として使います。ISBNのない電子書籍もタイトルと著者から取り込みます。
+The expected CSV headers are `ISBN, title, author, rating, reading status, category, tags, registration date, completion date`; Japanese header variants are supported. Title is required and ISBN is optional. Re-importing the same user/book updates or skips the existing record.
 
-## QMD統合
+Booklog's headerless 17-column Windows-31J format is also supported. Its product-ID column may contain an ISBN-10 for print books or a non-ISBN identifier for ebooks. Booktrail uses it only when it is a valid ISBN and still imports ebooks without an ISBN by title and author.
 
-QMDは別サービスにせず、Railsから `Open3.capture3` へ固定の引数配列を渡して呼びます。標準出力のJSONと標準エラーの進捗表示を分離し、ユーザー入力をシェル文字列へ連結しません。コマンドとcollection名は許可リストで検証し、各呼出しは45秒でタイムアウトします。バイナリ不在、モデルエラー、JSON不正を含む障害時はFallbackへ戻ります。
+## QMD integration
 
-3方式は名前だけを変えた代理実装ではありません。Vector Onlyは `qmd vsearch`、BM25 + Vectorは `qmd search` と `qmd vsearch` を別々に実行してアプリ側でReciprocal Rank Fusion、QMD Hybridは `qmd query --explain` によるQuery Expansion・候補統合・Rerankerを使います。検索結果の元順位と各スコアは保存し、読了傾向、今回の目的、新規性、多様性を加えた最終リランキングを行います。
+QMD remains a CLI boundary inside the Rails monolith. Rails calls `Open3.capture3` with fixed argument arrays, separates JSON standard output from progress on standard error, allowlists commands and collection names, and enforces timeouts. Missing binaries, model errors, malformed JSON, and timeouts fall back safely.
 
-### インストールとインデックス
+The three modes are not renamed versions of one proxy implementation:
+
+- **Vector Only** calls `qmd vsearch`.
+- **BM25 + Vector** calls `qmd search` and `qmd vsearch` independently and fuses their ranks in Rails with reciprocal rank fusion.
+- **QMD Hybrid + Reranker** calls `qmd query --explain` and preserves query expansion, fusion, and reranking evidence.
+
+Original ranks and available component scores are stored before the final reading-pattern, goal, novelty, and diversity rerank.
+
+### Install and index
 
 ```bash
 npm install -g @tobilu/qmd
@@ -105,47 +170,47 @@ qmd embed
 BOOKTRAIL_QMD=1 bin/dev
 ```
 
-通常は `bin/dev` 内でSolid Queueも起動します。Webとワーカーを分けて確認したい場合は、別ターミナルで次を実行します。
+To run the web process and worker separately:
 
 ```bash
 BOOKTRAIL_QMD=1 bin/jobs start
 ```
 
-Google Booksによる候補発見は既定で有効で、推薦可能な公開書誌が合計1,000冊になるまでページング取得します。著者と公開カテゴリだけで不足する場合は、全ユーザー共通の固定分野クエリ（文学、SF、科学、教育、歴史など）で候補母集団を補います。初回はAPIリクエストとQMD Embeddingに時間がかかりますが、以後は検索ページを30日キャッシュします。共有IPや無認証アクセスはHTTP 429になる場合があるため、継続利用では制限付きの `GOOGLE_BOOKS_API_KEY` を推奨します。キーは環境変数だけに置き、リポジトリへ保存しません。開発時に小さなカタログで試す場合は `BOOKTRAIL_CATALOG_TARGET` を1〜1,000の範囲で指定できます。外部候補発見を完全に停止する場合は次のように起動します。
+Google Books catalog discovery is enabled by default and pages until the public recommendable catalog reaches 1,000 books. If author and public-subject signals are insufficient, reader-independent public seed fields—literature, SF, science, education, history, and adjacent areas—complete the candidate corpus. Initial API requests and QMD embedding can take time; successful pages are cached for 30 days.
+
+Shared IPs and unauthenticated requests may receive HTTP 429, so a restricted `GOOGLE_BOOKS_API_KEY` is recommended. Keep the key only in the environment. `BOOKTRAIL_CATALOG_TARGET` can lower the development target from 1,000. Disable external discovery with:
 
 ```bash
 BOOKTRAIL_CATALOG_DISCOVERY=0 BOOKTRAIL_QMD=1 bin/dev
 ```
 
-`qmd init` によりプロジェクトローカルの `.qmd/` にインデックスが作られます。このディレクトリと生成MarkdownはGit管理外です。書籍更新後は `bin/rails qmd:documents && qmd update && qmd embed` を実行します。Embeddingモデルを変えた場合、既存ベクトルに互換性がないため必ず再生成します。
+The project-local `.qmd/` index and generated Markdown documents are ignored by Git. Rebuild documents and embeddings after book metadata changes. Changing the embedding model requires a forced rebuild:
 
 ```bash
 qmd embed -f
 ```
 
-QMDの標準構成を基本に、Embeddingのみ日本語向けQwen3へ変更します。
-
-| 用途 | モデル | おおよその容量 |
+| Purpose | Model | Approximate size |
 |---|---|---:|
-| Embedding | Qwen3-Embedding-0.6B Q8 | 約640MB |
-| Reranker | Qwen3-Reranker-0.6B Q8 | 約640MB |
-| Query expansion | QMD標準 1.7B Q4 | 約1.1GB |
+| Embedding | Qwen3-Embedding-0.6B Q8 | 640 MB |
+| Reranker | Qwen3-Reranker-0.6B Q8 | 640 MB |
+| Query expansion | QMD default 1.7B Q4 | 1.1 GB |
 
-合計は約2.4GBに加え、インデックス領域が必要です。モデルは初回の `qmd embed` / `qmd query` 時にダウンロードされ、既定では `~/.cache/qmd/models/` に保存されます。Booktrailのインデックスは `.qmd/index.sqlite`、グローバル運用時の既定は `~/.cache/qmd/index.sqlite` です。モデルキャッシュは `XDG_CACHE_HOME` で変更できます。QMDの現行要件とCLIは [tobi/qmd](https://github.com/tobi/qmd) を参照してください。
+Allow roughly 2.4 GB plus index storage. Models download on first `qmd embed` or `qmd query` and are cached by default in `~/.cache/qmd/models/`. The project index is `.qmd/index.sqlite`; global QMD use defaults to `~/.cache/qmd/index.sqlite`. `XDG_CACHE_HOME` can relocate the cache. Refer to [tobi/qmd](https://github.com/tobi/qmd) for current QMD requirements and CLI details.
 
-### Fallbackモード
+### Fallback mode
 
-`BOOKTRAIL_QMD` を設定しない状態が既定です。`/recommendation_sessions/new` から作成した場合も、起動中のWebプロセスとSolid Queueワーカーにこの環境変数がなければFallbackを使います。FallbackはFixtureのモックではなく、実際の読書プロフィールと推薦カタログを使い、SQLiteの書誌情報からキーワード一致、カテゴリ接点、ページ数、目的、新規性を決定的に採点します。モデルやネットワークなしでUI開発、テスト、デモができます。
+Fallback is the default when `BOOKTRAIL_QMD` is unset. Recommendations created from `/recommendation_sessions/new` still use the real imported profile and recommendable catalog, but score keyword overlap, category connection, page fit, goal fit, and novelty deterministically in SQLite. It is not a fixture mock.
 
-画面からQMDのEmbedding、Query Expansion、Rerankerを使った推薦を作成する場合は、サーバーを停止して次のように再起動してから、新しい推薦セッションを作成してください。
+To create recommendations with QMD from the UI, stop the server and restart it before creating a new session:
 
 ```bash
 BOOKTRAIL_QMD=1 bin/dev
 ```
 
-起動前に作成済みのセッションは再計算されません。QMDコマンドが利用できない、タイムアウトする、または不正な結果を返した場合も、その推薦処理だけ自動的にFallbackへ切り替わります。実際に使用した経路は、アルゴリズム比較画面から「スコア詳細」を開き、`Backend` が `qmd` または `fallback` のどちらになっているかで確認できます。FallbackはQMDのEmbeddingやRerankerスコアを装わず、取得できた値だけを表示します。
+Existing sessions are not recalculated. If QMD is missing, times out, or returns malformed output, only that retrieval operation falls back automatically. Open **Score details** from the algorithm comparison page and inspect `Backend`: `qmd` means the real QMD pipeline ran, while `fallback` means the deterministic local path ran.
 
-## テストと品質確認
+## Tests and quality checks
 
 ```bash
 bin/rails test
@@ -153,41 +218,44 @@ bin/rubocop
 bundle exec brakeman --no-pager
 ```
 
-CSV境界、ISBN、プロフィール重み、既読・フィードバック除外、カテゴリ重複、3方式、QMD Fallback、ファイル形式制限、ブラウザの縦フローをMinitestで確認します。
+The suite covers CSV boundaries, ISBN handling, profile weights, read and feedback exclusions, category uniqueness, all three recommendation modes, QMD failure fallback, file restrictions, locale persistence, background-job locale propagation, and the browser-level vertical flow.
 
-## 外部データソース
+## External data sources
 
-1. [openBD API](https://openbd.jp/) — ISBN書誌情報の第一候補
-2. [Google Books API](https://developers.google.com/books/docs/v1/using) — openBDで不足する説明・カテゴリ・ページ数の補完、および未読候補の公開書誌検索
-3. ユーザー提供CSV — APIで補完できない場合
+1. [openBD API](https://openbd.jp/) — primary ISBN metadata source
+2. [Google Books API](https://developers.google.com/books/docs/v1/using) — description, category, page-count fallback and public unread-candidate discovery
+3. User-provided CSV — retained only as parsed application records when APIs cannot fill metadata
 
-ISBN書誌補完ではISBNだけを送信します。候補発見では、ユーザーが同意した場合に限り、プロフィール上位5著者を `inauthor:` 検索し、その公開結果から得た最大10カテゴリを `subject:` 検索します。各検索を20件ずつページングし、まだ不足する場合だけ個人情報を含まない固定分野クエリを使い、推薦可能な公開書誌が既定の1,000冊へ達した時点で停止します。評価、レビュー、コメント、Booklogタグ、プロフィール要約、書名一覧、生CSVは送信しません。検索文字列自体はDBへ保存せず、ページ単位のSHA-256ダイジェスト、取得日時、件数だけを保持します。成功した検索ページは30日、失敗した検索ページは1時間再送せず、HTTP 429を繰り返し発生させません。検索間隔とHTTP 429の再試行も制御します。Booklog全体のスクレイピングは行いません。
+ISBN enrichment sends only the ISBN. Consented candidate discovery searches up to five profile authors and up to ten subjects derived from public Google Books results. It requests 20 results per page, uses reader-independent seed queries only when needed, and stops at the configured catalog target.
 
-## プライバシー
+It does not send ratings, reviews, comments, Booklog tags, profile summaries, title lists, or raw CSV. Query text is not stored; the database retains only a page-specific SHA-256 digest, fetch time, and result count. Successful pages are not repeated for 30 days and failed pages for one hour. Requests are throttled and HTTP 429 retries are bounded. Booktrail does not scrape Booklog.
 
-- ユーザー本人がアップロードした履歴だけを使用し、アップロード原本は保存しません
-- ユーザーの読書履歴と運営側の推薦カタログをDB上で分離し、履歴の書籍はQMDへ索引しません
-- レビュー本文・コメントはMVPの推薦へ送りません
-- ISBN書誌補完で外部APIへ送るのはISBNだけです
-- 候補発見を有効にした場合だけ、上位5著者名と公開書誌から派生した最大10カテゴリをGoogle Booksへ送ります
-- 1,000冊に足りない場合の固定分野クエリは全ユーザー共通で、読書履歴から生成しません
-- 候補発見には評価、レビュー、コメント、タグ、書名一覧、生CSVを送りません
-- QMDのEmbedding、Query Expansion、Rerankerはローカル実行でき、読書プロフィールを外部LLMへ送らずに済みます
-- プロフィール画面から履歴、プロフィール、推薦、フィードバックを削除できます
-- 将来の匿名集計や協調フィルタリングには別途明示的な同意が必要です
+## Privacy
 
-## 現在の制約
+- Use only history uploaded by the reader; never retain the original upload
+- Separate private reading history from the public recommendation catalog; never index private history books into QMD
+- Do not use review text or comments for MVP recommendations
+- Send only ISBN for ISBN enrichment
+- Send selected authors and public derived subjects only after consented catalog discovery is enabled
+- Use the same public seed fields for every reader; never derive them from private history
+- Never send ratings, reviews, comments, tags, title lists, profile summaries, or raw CSV during discovery
+- Run embedding, query expansion, and reranking locally so the reading profile does not leave the machine for an external LLM
+- Provide deletion of history, profile, recommendations, and feedback
+- Require separate explicit consent before future anonymous aggregation or collaborative filtering
 
-- 認証はなく、単一デモユーザーです
-- 書誌補完はジョブ実行環境が必要です。ローカルでSolid Queueを動かさない場合もCSV情報で継続します
-- FallbackのVector/BM25値は軽量な代理スコアで、QMDの実モデル評価ではありません
-- ISBNからシリーズ情報を安定取得できないため、タイトルの巻数表記による保守的なシリーズ判定です
-- QMD CLI JSONの `--explain` 項目はバージョン差を許容し、欠落値は開発者画面で `—` と表示します
-- QMDモードはローカルモデルを同期実行するため、初回ダウンロード時やCPU環境では推薦生成に時間がかかります
-- 推薦はSolid Queueで非同期生成しますが、MVPでは進捗率ではなく pending／processing／completed／failed の状態表示です
-- Google Booksの検索品質とAPI割当に依存します。障害時は既存カタログだけで推薦を続行します
-- 書影URLは外部配信元に依存します。欠落時はローカルのプレースホルダーを表示します
+## Current limitations
 
-## 将来の協調フィルタリング
+- No authentication; the MVP uses one demo user
+- Metadata enrichment needs a running job worker, but CSV metadata remains usable without it
+- Fallback vector and BM25 values are lightweight proxy scores, not QMD model evaluations
+- Series detection is conservative because ISBN metadata does not reliably expose series identity
+- QMD `--explain` fields vary by CLI version; unavailable values appear as `—`
+- Local model startup, first download, and CPU inference can make QMD generation slow
+- Background generation exposes lifecycle states rather than a precise percentage
+- Candidate coverage depends on Google Books quality and quota; failures continue with the existing catalog
+- Cover images depend on external hosts; missing covers use a local placeholder
+- UI locale and preferred book language are not yet separate preferences
 
-十分な同意済みユーザーデータが集まった段階で `CollaborativeFilteringCandidateProvider` を追加します。共起数、cosine similarity、lift、Bayesian smoothing、人気度補正、最低共起数を評価します。現時点ではデータがないため、見せかけの協調フィルタリングは実装していません。
+## Future collaborative filtering
+
+After enough users explicitly consent to pooled data, a `CollaborativeFilteringCandidateProvider` can be added behind the existing provider contract. Candidate signals would include co-occurrence count, cosine similarity, lift, Bayesian smoothing, popularity correction, and a minimum co-occurrence threshold. Booktrail intentionally does not simulate collaborative filtering before that data exists.

@@ -130,7 +130,15 @@ QMDの標準構成を基本に、Embeddingのみ日本語向けQwen3へ変更し
 
 ### Fallbackモード
 
-`BOOKTRAIL_QMD` を設定しない状態が既定です。SQLiteの書誌情報からキーワード一致、カテゴリ接点、ページ数、目的、新規性を決定的に採点するため、モデルやネットワークなしでUI開発、テスト、デモができます。FallbackはQMDのEmbeddingやRerankerスコアを装わず、開発者画面には取得できた値だけを表示します。
+`BOOKTRAIL_QMD` を設定しない状態が既定です。`/recommendation_sessions/new` から作成した場合も、起動中のWebプロセスとSolid Queueワーカーにこの環境変数がなければFallbackを使います。FallbackはFixtureのモックではなく、実際の読書プロフィールと推薦カタログを使い、SQLiteの書誌情報からキーワード一致、カテゴリ接点、ページ数、目的、新規性を決定的に採点します。モデルやネットワークなしでUI開発、テスト、デモができます。
+
+画面からQMDのEmbedding、Query Expansion、Rerankerを使った推薦を作成する場合は、サーバーを停止して次のように再起動してから、新しい推薦セッションを作成してください。
+
+```bash
+BOOKTRAIL_QMD=1 bin/dev
+```
+
+起動前に作成済みのセッションは再計算されません。QMDコマンドが利用できない、タイムアウトする、または不正な結果を返した場合も、その推薦処理だけ自動的にFallbackへ切り替わります。実際に使用した経路は、アルゴリズム比較画面から「スコア詳細」を開き、`Backend` が `qmd` または `fallback` のどちらになっているかで確認できます。FallbackはQMDのEmbeddingやRerankerスコアを装わず、取得できた値だけを表示します。
 
 ## テストと品質確認
 

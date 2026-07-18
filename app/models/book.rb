@@ -7,6 +7,16 @@ class Book < ApplicationRecord
   validates :title, presence: true
   validates :isbn, uniqueness: true, allow_nil: true
 
+  scope :recommendable, -> { where(recommendable: true) }
+
+  def series_key
+    normalized = title.to_s.unicode_normalize(:nfkc).downcase.squish
+    normalized = normalized.sub(/\s*\([上下中前後]\)\s*\z/, "")
+    normalized = normalized.sub(/\s*(?:第?\d+巻|[上下中前後])\s*\z/, "")
+    normalized = normalized.sub(/\A(.{2,}?)(?:[ivxlcdm]+|\d+)(?:\s.*)?\z/, '\\1')
+    normalized
+  end
+
   def self.normalize_isbn(value)
     digits = value.to_s.upcase.gsub(/[^0-9X]/, "")
     return digits if digits.length == 10 && valid_isbn10?(digits)

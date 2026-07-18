@@ -8,8 +8,10 @@ class BookMetadataProvider
   CACHE_TTL = 30.days
 
   def fetch(isbn)
-    Rails.cache.fetch("book-metadata/v1/#{isbn}", expires_in: CACHE_TTL) do
-      openbd(isbn) || google_books(isbn) || {}
+    Rails.cache.fetch("book-metadata/v2/#{isbn}", expires_in: CACHE_TTL) do
+      primary = openbd(isbn) || {}
+      secondary = discovery_metadata_complete?(primary) ? {} : (google_books(isbn) || {})
+      merge_metadata(primary, secondary)
     end
   end
 
@@ -46,6 +48,18 @@ class BookMetadataProvider
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: TIMEOUT_SECONDS, read_timeout: TIMEOUT_SECONDS) { |http| http.request(request) }
     response.value
     JSON.parse(response.body)
+  end
+
+  def discovery_metadata_complete?(metadata)
+    metadata.values_at(:description, :categories, :page_count).all?(&:present?)
+  end
+
+  def merge_metadata(primary, secondary)
+    return secondary if primary.empty?
+    return primary if secondary.empty?
+
+    secondary.merge(primary) { |_key, fallback_value, primary_value| primary_value.presence || fallback_value }
+      .merge(metadata_source: "openbd+google_books")
   end
 
   def date(value)

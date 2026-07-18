@@ -32,9 +32,10 @@ Booklog CSV → BooklogCsvImporter → Book / ReadingRecord
                                   └→ BookMetadataJob → openBD → Google Books
 ReadingRecord → ReadingProfileGenerator → ReadingProfile
 ReadingProfile + Goal
-  ├→ Vector Only provider
-  ├→ BM25 + Vector provider
-  └→ QMD Hybrid provider → QMD CLI（失敗時Fallback）
+  ├→ Vector Only → qmd vsearch
+  ├→ BM25 + Vector → qmd search + vsearch → RRF
+  └→ QMD Hybrid → qmd query（Query Expansion + RRF + Reranker）
+                          └→ 障害時は各方式のFallback
                 ↓
        RecommendationEngine
       関連度45% + 読了傾向20% + 目的15% + 新規性10% + 多様性10%
@@ -42,7 +43,7 @@ ReadingProfile + Goal
  RecommendationSession / Recommendation / Feedback
 ```
 
-QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目的 + 推薦意図` です。Likely to Love、Easy to Continue、Broaden Your Worldを別々に検索してから、既読除外と多様性制約を適用します。候補Providerの共通契約は `RecommendationCandidateProvider` にあり、将来の協調フィルタリングを差し込めます。詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
+QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目的 + 推薦意図` です。Likely to Love、Easy to Continue、Broaden Your Worldを別々に検索してから、既読・拒否済み候補の除外と多様性制約を適用します。QMDへ索引するのは運営側が用意した推薦カタログだけで、ユーザーが取り込んだ非公開の読書履歴は検索文書にしません。候補Providerの共通契約は `RecommendationCandidateProvider` にあり、将来の協調フィルタリングを差し込めます。詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
 
 ## 必要環境
 
@@ -57,7 +58,6 @@ QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目�
 ```bash
 git clone <repository-url>
 cd booktrail
-eval "$(mise activate zsh)"
 bin/setup
 bin/rails db:seed
 bin/dev
@@ -79,22 +79,24 @@ Booklogが出力するヘッダーなし・17列・Windows-31J形式にも対応
 
 ## QMD統合
 
-QMDは別サービスにせず、Railsから `Open3.capture2e` へ固定の引数配列を渡して呼びます。ユーザー入力をシェル文字列へ連結しません。20秒でタイムアウトし、バイナリ不在、モデルエラー、JSON不正を含む障害時はFallbackへ戻ります。
+QMDは別サービスにせず、Railsから `Open3.capture3` へ固定の引数配列を渡して呼びます。標準出力のJSONと標準エラーの進捗表示を分離し、ユーザー入力をシェル文字列へ連結しません。コマンドとcollection名は許可リストで検証し、各呼出しは45秒でタイムアウトします。バイナリ不在、モデルエラー、JSON不正を含む障害時はFallbackへ戻ります。
+
+3方式は名前だけを変えた代理実装ではありません。Vector Onlyは `qmd vsearch`、BM25 + Vectorは `qmd search` と `qmd vsearch` を別々に実行してアプリ側でReciprocal Rank Fusion、QMD Hybridは `qmd query --explain` によるQuery Expansion・候補統合・Rerankerを使います。検索結果の元順位と各スコアは保存し、読了傾向、今回の目的、新規性、多様性を加えた最終リランキングを行います。
 
 ### インストールとインデックス
 
 ```bash
 npm install -g @tobilu/qmd
 export QMD_EMBED_MODEL="hf:Qwen/Qwen3-Embedding-0.6B-GGUF/Qwen3-Embedding-0.6B-Q8_0.gguf"
-eval "$(mise activate zsh)"
 bin/rails qmd:documents
-qmd collection add "$(pwd)/tmp/qmd/books" --name booktrail
+qmd init
+qmd collection add tmp/qmd/books --name booktrail
 qmd update
 qmd embed
 BOOKTRAIL_QMD=1 bin/dev
 ```
 
-書籍更新後は `bin/rails qmd:documents && qmd update && qmd embed` を実行します。Embeddingモデルを変えた場合、既存ベクトルに互換性がないため必ず再生成します。
+`qmd init` によりプロジェクトローカルの `.qmd/` にインデックスが作られます。このディレクトリと生成MarkdownはGit管理外です。書籍更新後は `bin/rails qmd:documents && qmd update && qmd embed` を実行します。Embeddingモデルを変えた場合、既存ベクトルに互換性がないため必ず再生成します。
 
 ```bash
 qmd embed -f
@@ -108,16 +110,15 @@ QMDの標準構成を基本に、Embeddingのみ日本語向けQwen3へ変更し
 | Reranker | Qwen3-Reranker-0.6B Q8 | 約640MB |
 | Query expansion | QMD標準 1.7B Q4 | 約1.1GB |
 
-合計は約2.4GBに加え、インデックス領域が必要です。モデルは初回の `qmd embed` / `qmd query` 時にダウンロードされ、既定では `~/.cache/qmd/models/`、インデックスは `~/.cache/qmd/index.sqlite` に保存されます。`XDG_CACHE_HOME` で変更できます。QMDの現行要件とCLIは [tobi/qmd](https://github.com/tobi/qmd) を参照してください。
+合計は約2.4GBに加え、インデックス領域が必要です。モデルは初回の `qmd embed` / `qmd query` 時にダウンロードされ、既定では `~/.cache/qmd/models/` に保存されます。Booktrailのインデックスは `.qmd/index.sqlite`、グローバル運用時の既定は `~/.cache/qmd/index.sqlite` です。モデルキャッシュは `XDG_CACHE_HOME` で変更できます。QMDの現行要件とCLIは [tobi/qmd](https://github.com/tobi/qmd) を参照してください。
 
 ### Fallbackモード
 
-`BOOKTRAIL_QMD` を設定しない状態が既定です。SQLiteの書誌情報からキーワード一致、カテゴリ接点、ページ数、目的、新規性を決定的に採点するため、モデルやネットワークなしでUI開発、テスト、デモができます。Fallbackのスコアは本番のEmbedding品質を再現するものではなく、画面と評価導線を検証するためのものです。
+`BOOKTRAIL_QMD` を設定しない状態が既定です。SQLiteの書誌情報からキーワード一致、カテゴリ接点、ページ数、目的、新規性を決定的に採点するため、モデルやネットワークなしでUI開発、テスト、デモができます。FallbackはQMDのEmbeddingやRerankerスコアを装わず、開発者画面には取得できた値だけを表示します。
 
 ## テストと品質確認
 
 ```bash
-eval "$(mise activate zsh)"
 bin/rails test
 bin/rubocop
 bundle exec brakeman --no-pager
@@ -128,7 +129,7 @@ CSV境界、ISBN、プロフィール重み、既読・フィードバック除�
 ## 外部データソース
 
 1. [openBD API](https://openbd.jp/) — ISBN書誌情報の第一候補
-2. [Google Books API](https://developers.google.com/books) — openBDで見つからない場合
+2. [Google Books API](https://developers.google.com/books) — openBDで不足する説明・カテゴリ・ページ数の補完
 3. ユーザー提供CSV — APIで補完できない場合
 
 API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウトします。同じISBNの結果はRails cacheへ30日保存します。Booklog全体のスクレイピングは行いません。
@@ -136,6 +137,7 @@ API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウ
 ## プライバシー
 
 - ユーザー本人がアップロードした履歴だけを使用し、アップロード原本は保存しません
+- ユーザーの読書履歴と運営側の推薦カタログをDB上で分離し、履歴の書籍はQMDへ索引しません
 - レビュー本文・コメントはMVPの推薦へ送りません
 - 外部書誌APIへ送るのはISBNだけです
 - QMDのEmbedding、Query Expansion、Rerankerはローカル実行でき、読書プロフィールを外部LLMへ送らずに済みます
@@ -147,8 +149,9 @@ API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウ
 - 認証はなく、単一デモユーザーです
 - 書誌補完はジョブ実行環境が必要です。ローカルでSolid Queueを動かさない場合もCSV情報で継続します
 - FallbackのVector/BM25値は軽量な代理スコアで、QMDの実モデル評価ではありません
-- シリーズ判定データがないため、MVPでは同一著者制約とカテゴリ間重複排除を優先します
+- ISBNからシリーズ情報を安定取得できないため、タイトルの巻数表記による保守的なシリーズ判定です
 - QMD CLI JSONの `--explain` 項目はバージョン差を許容し、欠落値は開発者画面で `—` と表示します
+- QMDモードはローカルモデルを同期実行するため、初回ダウンロード時やCPU環境では推薦生成に時間がかかります
 - 書影URLは外部配信元に依存します。欠落時はローカルのプレースホルダーを表示します
 
 ## 将来の協調フィルタリング

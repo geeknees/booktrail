@@ -39,7 +39,9 @@ catalog.each do |title, author, pages, categories, description|
     book.categories = categories
     book.description = description
     book.metadata_source = 'fixture'
+    book.recommendable = true
   end
+  Book.where(title:, author:).update_all(recommendable: true)
 end
 
 User.find_or_create_by!(name: 'デモ読者') { |user| user.locale = 'ja' }

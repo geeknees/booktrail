@@ -4,6 +4,6 @@ namespace :qmd do
   desc "Write one Markdown search document per catalog book"
   task documents: :environment do
     QmdBookDocumentWriter.new.call
-    puts "Wrote #{Book.count} documents to tmp/qmd/books"
+    puts "Wrote #{Book.recommendable.count} documents to tmp/qmd/books"
   end
 end

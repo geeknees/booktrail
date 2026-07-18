@@ -30,6 +30,8 @@
 
 /public/assets
 
+# Keep the project-local QMD index and model state out of version control.
+/.qmd/
+
 # Ignore key files for decrypting credentials and more.
 /config/*.key
-

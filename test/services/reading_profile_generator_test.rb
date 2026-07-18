@@ -16,4 +16,12 @@ class ReadingProfileGeneratorTest < ActiveSupport::TestCase
     refute_includes profile.preferred_categories, "古典"
     refute_match(/読解力|読書レベル/, profile.summary)
   end
+
+  test "recognizes Booklog's current-reading status" do
+    user = User.create!(name: "読書家")
+    book = Book.create!(title: "読書中の本", categories: [ "科学" ])
+    record = user.reading_records.create!(book:, reading_status: "いま読んでる")
+
+    assert_equal 0.8, ReadingProfileGenerator.weight_for(record)
+  end
 end

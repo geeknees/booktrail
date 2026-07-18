@@ -1,13 +1,14 @@
 # ABOUTME: Provides deterministic local candidates when QMD or models are unavailable.
 # ABOUTME: Approximates keyword and semantic signals for reliable demos and tests.
 class FallbackCandidateProvider < RecommendationCandidateProvider
+  EXCLUDED_FEEDBACK_TYPES = %w[already_read not_for_me want_to_read].freeze
   def initialize(algorithm:)
     @algorithm = algorithm
   end
 
   def candidates(user:, profile:, goal:, intent:, limit:)
     terms = (profile.favorite_topics + profile.preferred_categories + profile.favorite_authors).map(&:downcase)
-    Book.where.not(id: excluded_ids(user)).filter_map do |book|
+    Book.recommendable.where.not(id: excluded_ids(user)).filter_map do |book|
       text = [ book.title, book.author, book.description, *book.categories ].compact.join(" ").downcase
       keyword = terms.count { |term| text.include?(term) }.to_f / [ terms.size, 1 ].max
       page_fit = page_fit(book.page_count, profile.typical_page_count)
@@ -15,14 +16,14 @@ class FallbackCandidateProvider < RecommendationCandidateProvider
       category_overlap = (book.categories & profile.preferred_categories).size.to_f / [ profile.preferred_categories.size, 1 ].max
       semantic = [ category_overlap * 0.75 + (text.include?("物語") ? 0.2 : 0.05), 1.0 ].min
       score = score_for(keyword:, semantic:, page_fit:, novelty:, intent:)
-      Candidate.new(book:, score:, details: { "bm25_score" => keyword.round(3), "vector_score" => semantic.round(3), "reranker_score" => (@algorithm == "qmd_hybrid" ? (score + 0.08).clamp(0, 1).round(3) : nil), "query_expansion" => intent })
+      Candidate.new(book:, score:, details: { "backend" => "fallback", "bm25_score" => keyword.round(3), "vector_score" => semantic.round(3), "reranker_score" => nil, "query_expansion" => intent })
     end.sort_by { |candidate| [ -candidate.score, candidate.book.id ] }.first(limit)
   end
 
   private
 
   def excluded_ids(user)
-    feedback_ids = RecommendationFeedback.where(feedback_type: "already_read").joins(recommendation: :recommendation_session).where(recommendation_sessions: { user_id: user.id }).pluck("recommendations.book_id")
+    feedback_ids = RecommendationFeedback.where(feedback_type: EXCLUDED_FEEDBACK_TYPES).joins(recommendation: :recommendation_session).where(recommendation_sessions: { user_id: user.id }).pluck("recommendations.book_id")
     user.reading_records.pluck(:book_id) | feedback_ids
   end
 

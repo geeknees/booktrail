@@ -5,7 +5,7 @@ require "test_helper"
 class ReaderJourneyTest < ActionDispatch::IntegrationTest
   test "uploads history, shows a profile, recommends books, compares algorithms, and saves feedback" do
     12.times do |index|
-      Book.create!(title: "推薦候補#{index}", author: "著者#{index}", categories: [ "SF" ], page_count: 320 + index, description: "宇宙と科学を扱う物語")
+      Book.create!(title: "推薦候補#{('A'.ord + index).chr}", author: "著者#{index}", categories: [ "SF" ], page_count: 320 + index, description: "宇宙と科学を扱う物語", recommendable: true)
     end
     file = fixture_file_upload("booklog_sample.csv", "text/csv")
 

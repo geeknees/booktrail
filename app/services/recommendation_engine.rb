@@ -18,16 +18,20 @@ class RecommendationEngine
   private
 
   def generate_algorithm(session, algorithm)
-    provider = algorithm == "qmd_hybrid" ? QmdCandidateProvider.new : FallbackCandidateProvider.new(algorithm:)
+    provider = QmdCandidateProvider.new(algorithm:)
     used_books = []
     used_authors = Hash.new(0)
+    used_series = []
     Recommendation::CATEGORIES.each do |category|
-      candidates = rerank(provider.candidates(user: @user, profile: @profile, goal: @goal, intent: category, limit: 20), category, used_authors)
-      selected = candidates.find { |candidate| !used_books.include?(candidate.book.id) && used_authors[candidate.book.author] < 2 }
+      candidates = rerank(provider.candidates(user: @user, profile: @profile, goal: @goal, intent: category, limit: 12), category, used_authors)
+      selected = candidates.find do |candidate|
+        !used_books.include?(candidate.book.id) && used_authors[candidate.book.author] < 2 && !used_series.include?(candidate.book.series_key)
+      end
       next unless selected
 
       used_books << selected.book.id
       used_authors[selected.book.author] += 1
+      used_series << selected.book.series_key
       details = selected.details.merge("final_rank" => candidates.index(selected) + 1, "final_score" => selected.score.round(3))
       session.recommendations.create!(book: selected.book, algorithm:, category:, rank: 1, score: selected.score, score_details: details, explanation: explanation(selected.book, category))
     end
@@ -40,11 +44,29 @@ class RecommendationEngine
       novelty = novelty(candidate.book, category)
       diversity = used_authors[candidate.book.author].zero? ? 1.0 : 0.25
       quality = candidate.book.title.present? && (candidate.book.author.present? || candidate.book.description.present?) ? 1.0 : 0.4
-      final = (candidate.score * WEIGHTS[:relevance] + pattern_fit * WEIGHTS[:reading_pattern_fit] + goal_fit * WEIGHTS[:reading_goal_fit] + novelty * WEIGHTS[:novelty] + diversity * WEIGHTS[:diversity]) * quality
+      feedback_fit = feedback_fit(candidate.book)
+      final = (candidate.score * WEIGHTS[:relevance] + pattern_fit * WEIGHTS[:reading_pattern_fit] + goal_fit * WEIGHTS[:reading_goal_fit] + novelty * WEIGHTS[:novelty] + diversity * WEIGHTS[:diversity]) * quality * feedback_fit
       RecommendationCandidateProvider::Candidate.new(book: candidate.book, score: final, details: candidate.details.merge(
-        "original_rank" => index + 1, "reading_pattern_fit" => pattern_fit.round(3), "reading_goal_fit" => goal_fit.round(3), "novelty" => novelty.round(3), "diversity" => diversity.round(3)
+        "original_rank" => index + 1, "reading_pattern_fit" => pattern_fit.round(3), "reading_goal_fit" => goal_fit.round(3), "novelty" => novelty.round(3), "diversity" => diversity.round(3), "feedback_fit" => feedback_fit.round(3)
       ))
     end.sort_by { |candidate| -candidate.score }
+  end
+
+  def feedback_fit(book)
+    fit = 1.0
+    fit *= 0.7 if feedback_books("maybe_later").include?(book)
+    rejected = feedback_books("not_for_me")
+    fit *= 0.75 if rejected.any? { |item| item.author.present? && item.author == book.author }
+    fit *= 0.85 if rejected.any? { |item| (item.categories & book.categories).any? }
+    wanted = feedback_books("want_to_read")
+    fit *= 1.08 if wanted.any? { |item| (item.categories & book.categories).any? }
+    fit.clamp(0.5, 1.1)
+  end
+
+  def feedback_books(type)
+    @feedback_books ||= {}
+    @feedback_books[type] ||= Book.joins(recommendations: [ :feedbacks, :recommendation_session ])
+      .where(recommendation_feedbacks: { feedback_type: type }, recommendation_sessions: { user_id: @user.id }).distinct.to_a
   end
 
   def page_fit(book)

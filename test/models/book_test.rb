@@ -12,4 +12,9 @@ class BookTest < ActiveSupport::TestCase
     assert_nil Book.normalize_isbn("9784152098703")
     assert_nil Book.normalize_isbn("not-an-isbn")
   end
+
+  test "normalizes volume markers into a shared series key" do
+    assert_equal Book.new(title: "三体").series_key, Book.new(title: "三体II 黒暗森林").series_key
+    assert_equal Book.new(title: "約束の冬 (上)").series_key, Book.new(title: "約束の冬（下）").series_key
+  end
 end

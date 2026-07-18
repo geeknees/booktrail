@@ -20,12 +20,13 @@ class GoogleBooksSearchClientTest < ActiveSupport::TestCase
       Response.new("200", '{"items":[]}', nil)
     }
 
-    GoogleBooksSearchClient.new(requester:).search(query: 'inauthor:"著者"', limit: 100, language: "ja")
+    GoogleBooksSearchClient.new(requester:).search(query: 'inauthor:"著者"', limit: 100, language: "ja", start_index: 80)
 
     parameters = URI.decode_www_form(requested_uri.query).to_h
     assert_equal "40", parameters["maxResults"]
     assert_equal "books", parameters["printType"]
     assert_equal "ja", parameters["langRestrict"]
+    assert_equal "80", parameters["startIndex"]
   end
 
   test "retries a rate-limited request using Retry-After" do

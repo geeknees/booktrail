@@ -4,44 +4,88 @@ require "digest"
 
 class GoogleBooksCatalogDiscovery
   Result = Data.define(:updated_books, :external_queries)
-  AUTHOR_LIMIT = 3
-  SUBJECT_LIMIT = 2
-  RESULTS_PER_QUERY = 20
+  Page = Data.define(:volumes, :result_count)
+  TARGET_SIZE = 1_000
+  AUTHOR_LIMIT = 5
+  SUBJECT_LIMIT = 10
+  RESULTS_PER_PAGE = 20
+  MAX_PAGES_PER_QUERY = 10
+  DEFAULT_SEED_QUERIES = %w[日本文学 海外文学 SF 科学 技術 教育 歴史 社会 哲学 心理学 芸術 経済].freeze
   SUCCESS_CACHE_TTL = 30.days
   FAILURE_CACHE_TTL = 1.hour
 
-  def initialize(profile:, client: GoogleBooksSearchClient.new)
+  def initialize(profile:, client: GoogleBooksSearchClient.new, target_size: ENV.fetch("BOOKTRAIL_CATALOG_TARGET", TARGET_SIZE).to_i,
+    seed_queries: DEFAULT_SEED_QUERIES)
     @profile = profile
     @client = client
+    @target_size = target_size.clamp(1, TARGET_SIZE)
+    @seed_queries = seed_queries
   end
 
   def call
-    author_volumes = @profile.favorite_authors.first(AUTHOR_LIMIT).flat_map do |author|
-      fetch("inauthor:#{sanitize(author)}")
-    end
-    subjects = author_volumes.flat_map { |volume| Array(volume.dig("volumeInfo", "categories")) }
-      .compact_blank.tally.sort_by { |name, count| [ -count, name ] }.first(SUBJECT_LIMIT).map(&:first)
-    subject_volumes = subjects.flat_map { |subject| fetch("subject:#{sanitize(subject)}") }
-    updated = (author_volumes + subject_volumes).uniq { |volume| isbn_for(volume) }.count { |volume| persist(volume) }
+    return Result.new(updated_books: 0, external_queries: 0) if catalog_full?
 
-    Result.new(updated_books: updated, external_queries: @external_queries.to_i)
+    discovered_categories = public_catalog_categories
+    @profile.favorite_authors.first(AUTHOR_LIMIT).each do |author|
+      discovered_categories.concat(discover("inauthor:#{sanitize(author)}"))
+      break if catalog_full?
+    end
+    subjects = discovered_categories
+      .compact_blank.tally.sort_by { |name, count| [ -count, name ] }.first(SUBJECT_LIMIT).map(&:first)
+    subjects.each do |subject|
+      discover("subject:#{sanitize(subject)}")
+      break if catalog_full?
+    end
+    @seed_queries.each do |query|
+      discover(sanitize(query))
+      break if catalog_full?
+    end
+
+    Result.new(updated_books: @updated_books.to_i, external_queries: @external_queries.to_i)
   end
 
   private
 
-  def fetch(query)
-    digest = Digest::SHA256.hexdigest("v2\0key=#{ENV['GOOGLE_BOOKS_API_KEY'].present?}\0ja\0#{query}")
+  def discover(query)
+    categories = []
+    start_index = 0
+    MAX_PAGES_PER_QUERY.times do
+      break if catalog_full?
+
+      limit = [ RESULTS_PER_PAGE, @target_size - Book.recommendable.count ].min
+      page = fetch(query, start_index:, limit:)
+      page.volumes.each do |volume|
+        categories.concat(Array(volume.dig("volumeInfo", "categories")))
+        @updated_books = @updated_books.to_i + 1 if persist(volume)
+      end
+      break if page.result_count < limit
+
+      start_index += page.result_count
+    end
+    categories
+  end
+
+  def fetch(query, start_index:, limit:)
+    digest = Digest::SHA256.hexdigest("v3\0key=#{ENV['GOOGLE_BOOKS_API_KEY'].present?}\0ja\0#{start_index}\0#{limit}\0#{query}")
     cached = CatalogDiscoveryQuery.find_by(query_digest: digest)
-    return [] if fresh?(cached)
+    return Page.new(volumes: [], result_count: [ cached.result_count, 0 ].max) if fresh?(cached)
 
     @external_queries = @external_queries.to_i + 1
-    volumes = @client.search(query:, limit: RESULTS_PER_QUERY, language: "ja")
+    volumes = @client.search(query:, limit:, language: "ja", start_index:)
     record_query(digest, volumes.length)
-    volumes
+    Page.new(volumes:, result_count: volumes.length)
   rescue Net::ProtocolError, Timeout::Error, SocketError, JSON::ParserError => error
     Rails.logger.warn("Google Books catalog query unavailable: #{error.class}")
     record_query(digest, -1) if digest
-    []
+    Page.new(volumes: [], result_count: 0)
+  end
+
+  def catalog_full?
+    Book.recommendable.count >= @target_size
+  end
+
+  def public_catalog_categories
+    Book.where(metadata_source: "google_books_discovery").pluck(:categories).flatten
   end
 
   def fresh?(query)

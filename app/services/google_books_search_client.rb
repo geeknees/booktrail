@@ -1,4 +1,4 @@
-# ABOUTME: Fetches public Google Books volumes with bounded unauthenticated queries.
+# ABOUTME: Fetches public Google Books volumes with bounded paginated queries.
 # ABOUTME: Applies timeouts and sends only the explicit discovery query parameters.
 require "json"
 require "net/http"
@@ -15,11 +15,12 @@ class GoogleBooksSearchClient
     @clock = clock
   end
 
-  def search(query:, limit:, language: "ja")
+  def search(query:, limit:, language: "ja", start_index: 0)
     uri = URI(ENDPOINT)
     parameters = {
       q: query,
       maxResults: limit.to_i.clamp(1, 40),
+      startIndex: start_index.to_i.clamp(0, 1_000),
       langRestrict: language,
       printType: "books",
       orderBy: "relevance",

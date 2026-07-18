@@ -1,0 +1,8 @@
+<section class="page-heading"><p class="eyebrow">Import complete</p><h1>インポート結果</h1><p><%= @import.original_filename %></p></section>
+<div class="stats">
+  <div class="stat"><strong><%= @import.result['success'] || 0 %></strong><span>取り込み</span></div>
+  <div class="stat"><strong><%= @import.result['skipped'] || 0 %></strong><span>スキップ</span></div>
+  <div class="stat"><strong><%= @import.result['errors'] || 0 %></strong><span>エラー</span></div>
+</div>
+<% if @import.result['row_errors'].present? %><div class="note"><h2>確認が必要な行</h2><ul><% @import.result['row_errors'].each do |error| %><li><%= error['line'] %>行目: <%= error['message'] %></li><% end %></ul></div><% end %>
+<div class="actions"><%= link_to '読書プロフィールを見る', reading_profile_path, class: 'button' %><%= link_to '別のCSVを取り込む', new_import_path, class: 'text-link' %></div>

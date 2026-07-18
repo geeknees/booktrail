@@ -9,6 +9,13 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+  root "home#show"
+  resources :imports, only: %i[new create show]
+  resource :reading_profile, only: :show
+  resource :reading_history, only: :destroy
+  resources :recommendation_sessions, only: %i[new create show] do
+    resource :comparison, only: :show, module: :recommendation_sessions
+  end
+  resources :recommendation_feedbacks, only: :create
+  resources :recommendations, only: :show
 end

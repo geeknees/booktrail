@@ -24,6 +24,12 @@
   </head>
 
   <body>
-    <%= yield %>
+    <header class="site-header">
+      <%= link_to root_path, class: 'brand' do %><span>Booktrail</span><small>One Book Leads to Another</small><% end %>
+      <nav><%= link_to '履歴を取り込む', new_import_path %><%= link_to 'プロフィール', reading_profile_path %><%= link_to '本を探す', new_recommendation_session_path, class: 'button button-small' %></nav>
+    </header>
+    <% flash.each do |type, message| %><div class="flash <%= type %>"><%= message %></div><% end %>
+    <main><%= yield %></main>
+    <footer><p>あなたの履歴は、あなたの次の一冊のために。</p></footer>
   </body>
 </html>

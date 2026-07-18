@@ -1,0 +1,5 @@
+<section class="page-heading"><p class="eyebrow">Algorithm lab</p><h1>推薦アルゴリズム比較</h1><p>Which recommendation method understands this reader best?</p></section>
+<div class="comparison-table"><table><thead><tr><th>推薦枠</th><th>Vector Only</th><th>BM25 + Vector</th><th>QMD Hybrid + Reranker</th></tr></thead><tbody>
+  <% Recommendation::CATEGORIES.each do |category| %><tr><th><%= category.humanize %></th><% Recommendation::ALGORITHMS.each do |algorithm| %><td><% item = @recommendations.fetch(algorithm, []).find { |rec| rec.category == category } %><% if item %><strong><%= item.book.title %></strong><small><%= item.book.author %></small><%= link_to 'スコア詳細', recommendation_path(item) %><% else %>候補なし<% end %></td><% end %></tr><% end %>
+</tbody></table></div>
+<div class="actions"><%= link_to '推薦に戻る', recommendation_session_path(@session), class: 'button' %></div>

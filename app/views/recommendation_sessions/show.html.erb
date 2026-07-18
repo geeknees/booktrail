@@ -1,0 +1,10 @@
+<section class="page-heading"><p class="eyebrow">Your next trail</p><h1>次の一冊につながる3つの道</h1><p>似ているだけでなく、読み続けられることを大切に選びました。</p></section>
+<div class="recommendations">
+  <% labels = {'likely_to_love'=>['きっと好き','Likely to Love'],'easy_to_continue'=>['読み切れそう','Easy to Continue'],'broaden_your_world'=>['世界を広げる','Broaden Your World']} %>
+  <% @recommendations.each do |recommendation| %><article class="recommendation-card">
+    <div class="book-cover"><% if recommendation.book.cover_image_url.present? %><%= image_tag recommendation.book.cover_image_url, alt: recommendation.book.title %><% else %><span>Booktrail</span><% end %></div>
+    <div class="book-copy"><p class="category"><%= labels[recommendation.category][0] %><small><%= labels[recommendation.category][1] %></small></p><h2><%= recommendation.book.title %></h2><p class="author"><%= recommendation.book.author %></p><p><%= truncate(recommendation.book.description, length: 110) %></p><div class="reason"><strong>選んだ理由</strong><p><%= recommendation.explanation %></p></div>
+      <div class="feedbacks"><% [['want_to_read','読みたい'],['maybe_later','あとで'],['not_for_me','自分には合わない'],['already_read','読んだことがある']].each do |value,label| %><%= button_to label, recommendation_feedbacks_path, params: { recommendation_feedback: { recommendation_id: recommendation.id, feedback_type: value } }, class: 'feedback-button' %><% end %></div>
+    </div></article><% end %>
+</div>
+<div class="actions"><%= link_to 'アルゴリズムを比較する', recommendation_session_comparison_path(@session), class: 'text-link' %></div>

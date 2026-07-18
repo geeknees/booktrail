@@ -1,0 +1,7 @@
+<section class="page-heading"><p class="eyebrow">Reading goal</p><h1>今、どんな本を読みたいですか？</h1><p>同じ履歴でも、今の目的によって次の一冊は変わります。</p></section>
+<%= form_with url: recommendation_sessions_path, scope: :recommendation_session, class: 'goal-grid' do |form| %>
+  <% [['light','気軽に楽しみたい','短く入りやすい本を中心に'],['same_pace','いつもと同じくらいの本を読みたい','よく読み切っている長さやテーマから'],['challenge','少し難しい本に挑戦したい','関心の延長にある一歩深い本へ'],['explore','新しい分野を開拓したい','接点を残しながら未知の分野へ']].each do |value, title, description| %>
+    <label class="goal-card"><%= form.radio_button :reading_goal, value, required: true %><span><strong><%= title %></strong><small><%= description %></small></span></label>
+  <% end %>
+  <%= form.submit '推薦をつくる', class: 'button goal-submit' %>
+<% end %>

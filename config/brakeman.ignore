@@ -1,0 +1,9 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "5208f3f4a534c326b1c523f6cb619a6436b1faeb616b927709340d0a4f29b5cd",
+      "note": "False positive: QMD is invoked with Open3's separate-argument form, never a shell command string. Limit is clamped to an integer and collection is allowlist-validated."
+    }
+  ],
+  "brakeman_version": "8.0.5"
+}

@@ -1,0 +1,13 @@
+<section class="hero">
+  <p class="eyebrow">One Book Leads to Another</p>
+  <h1>Booktrail</h1>
+  <p class="lead">Turn your reading history into a map for what to read next.</p>
+  <p class="jp-lead">読んできた本の軌跡から、次に読みたくなる一冊へ。</p>
+  <div class="actions"><%= link_to 'ブクログCSVを取り込む', new_import_path, class: 'button' %><% if @record_count.positive? %><%= link_to '次の一冊を探す', new_recommendation_session_path, class: 'text-link' %><% end %></div>
+</section>
+<section class="principle"><p>“The best recommendation is not merely the most similar book.<br>It is the book that helps the reader keep reading.”</p></section>
+<section class="three-up">
+  <article><span>01</span><h2>履歴をつなぐ</h2><p>評価や読了傾向を、過去の記録ではなく次の本への手がかりにします。</p></article>
+  <article><span>02</span><h2>目的から選ぶ</h2><p>今は気軽に読みたいのか、世界を広げたいのか。その気分を大切にします。</p></article>
+  <article><span>03</span><h2>理由がわかる</h2><p>なぜこの本なのかを、あなたの履歴にある事実から説明します。</p></article>
+</section>

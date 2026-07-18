@@ -32,6 +32,26 @@ class BooklogCsvImporterTest < ActiveSupport::TestCase
     assert_nil @user.reading_records.first.book.isbn
   end
 
+  test "imports Booklog's headerless 17-column Windows-31J export" do
+    rows = [
+      [ "1", "4478069786", "9784478069783", "", "5", "読み終わった", "", "kindle", "", "2025-07-01 10:00:00", "2025-07-10 20:00:00", "対話で育てるチーム", "山田太郎", "架空出版", "2024", "本", "244" ],
+      [ "1", "4101010013", "", "", "", "積読", "", "", "", "2025-07-02 10:00:00", "", "次に読む本", "佐藤花子", "架空書房", "2025", "本", "320" ],
+      [ "1", "B000000000", "", "", "", "いま読んでる", "", "kindle", "", "2025-07-03 10:00:00", "", "電子書籍の物語", "鈴木一郎", "架空文庫", "2025", "電子書籍", "180" ]
+    ]
+    csv = rows.map { |row| CSV.generate_line(row) }.join.encode(Encoding::Windows_31J)
+
+    result = import(csv)
+
+    assert_equal 3, result.result["success"]
+    assert_equal 0, result.result["errors"]
+    book = Book.find_by!(isbn: "9784478069783")
+    assert_equal "架空出版", book.publisher
+    assert_equal 244, book.page_count
+    assert_equal [ "kindle" ], @user.reading_records.find_by!(book:).tags
+    assert Book.exists?(isbn: "4101010013")
+    assert_nil Book.find_by!(title: "電子書籍の物語").isbn
+  end
+
   private
 
   def import(content)

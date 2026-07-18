@@ -24,4 +24,15 @@ class ReadingProfileGeneratorTest < ActiveSupport::TestCase
 
     assert_equal 0.8, ReadingProfileGenerator.weight_for(record)
   end
+
+  test "uses tags as reader-safe interests when imported books have no categories" do
+    user = User.create!(name: "読書家")
+    book = Book.create!(title: "カテゴリのない本", author: "著者")
+    user.reading_records.create!(book:, rating: 5, reading_status: "読み終わった", tags: [ "宇宙" ])
+
+    profile = ReadingProfileGenerator.new(user:).call
+
+    assert_includes profile.favorite_topics, "宇宙"
+    assert_includes profile.summary, "宇宙"
+  end
 end

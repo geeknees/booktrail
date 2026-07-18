@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_18_000004) do
   create_table "books", force: :cascade do |t|
     t.string "author"
     t.json "categories", default: [], null: false
@@ -28,6 +28,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_000003) do
     t.datetime "updated_at", null: false
     t.index ["isbn"], name: "index_books_on_isbn", unique: true, where: "isbn IS NOT NULL"
     t.index ["recommendable"], name: "index_books_on_recommendable"
+  end
+
+  create_table "catalog_discovery_queries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "fetched_at", null: false
+    t.string "query_digest", null: false
+    t.integer "result_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["query_digest"], name: "index_catalog_discovery_queries_on_query_digest", unique: true
   end
 
   create_table "imports", force: :cascade do |t|

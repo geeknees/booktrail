@@ -14,6 +14,8 @@ class RecommendationQueryBuilderTest < ActiveSupport::TestCase
     assert_includes query, "星を継ぐもの"
     assert_includes query, "少し難しい本に挑戦したい"
     assert_includes query, "テーマ、雰囲気、著者性、物語構造"
+    assert_includes query, "推定される好み: SF、宇宙"
+    assert_includes query, "よく読む著者: ジェイムズ・P・ホーガン"
     assert_operator query.length, :<, 4_000
   end
 end

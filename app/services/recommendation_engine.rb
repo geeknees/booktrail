@@ -92,6 +92,8 @@ class RecommendationEngine
 
   def explanation(book, category)
     shared = book.categories & @profile.preferred_categories
+    return "よく読んでいる#{book.author}の未読作品から選びました。" if book.author.present? && @profile.favorite_authors.include?(book.author)
+
     case category
     when "easy_to_continue"
       if book.page_count && @profile.typical_page_count

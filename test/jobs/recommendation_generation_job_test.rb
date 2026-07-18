@@ -4,6 +4,8 @@ require "test_helper"
 
 class RecommendationGenerationJobTest < ActiveJob::TestCase
   setup do
+    @previous_catalog_discovery = ENV["BOOKTRAIL_CATALOG_DISCOVERY"]
+    ENV["BOOKTRAIL_CATALOG_DISCOVERY"] = "0"
     @user = User.create!(name: "読書家")
     read = Book.create!(title: "読了本", author: "読了著者", categories: [ "科学" ], page_count: 320)
     @user.reading_records.create!(book: read, rating: 5, reading_status: "読了")
@@ -16,6 +18,10 @@ class RecommendationGenerationJobTest < ActiveJob::TestCase
       profile_snapshot: profile.snapshot,
       status: "pending"
     )
+  end
+
+  teardown do
+    ENV["BOOKTRAIL_CATALOG_DISCOVERY"] = @previous_catalog_discovery
   end
 
   test "generates every algorithm and category and marks the session completed" do

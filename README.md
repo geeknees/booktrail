@@ -18,6 +18,7 @@ Booktrailは、Booklog（ブクログ）の読書履歴を「過去の記録」�
 - 評価・読書状況を重み付けした読書プロフィール
 - 4つの読書目的と3つの推薦枠
 - 3方式の推薦比較、開発者向けスコア内訳
+- 同意済みの最小化クエリによるGoogle Books候補カタログ拡張
 - 読みたい／あとで／合わない／既読のフィードバック
 - 既読除外、著者偏重抑制、カテゴリ間重複排除、品質・多様性を含むリランキング
 - QMDなしでも動く決定的なFallbackモード
@@ -32,6 +33,8 @@ Booklog CSV → BooklogCsvImporter → Book / ReadingRecord
                                   └→ BookMetadataJob → openBD → Google Books
 ReadingRecord → ReadingProfileGenerator → ReadingProfile
 ReadingProfile + Goal → RecommendationGenerationJob（Solid Queue）
+                         ├→ GoogleBooksCatalogDiscovery → 公開候補を追加
+                         │                              └→ QMD差分更新・Embedding
                          ├→ Vector Only → qmd vsearch
                          ├→ BM25 + Vector → qmd search + vsearch → RRF
                          └→ QMD Hybrid → qmd query（Query Expansion + RRF + Reranker）
@@ -43,7 +46,7 @@ ReadingProfile + Goal → RecommendationGenerationJob（Solid Queue）
  RecommendationSession / Recommendation / Feedback
 ```
 
-QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目的 + 推薦意図` です。Likely to Love、Easy to Continue、Broaden Your Worldを別々に検索してから、既読・拒否済み候補の除外と多様性制約を適用します。QMDへ索引するのは運営側が用意した推薦カタログだけで、ユーザーが取り込んだ非公開の読書履歴は検索文書にしません。候補Providerの共通契約は `RecommendationCandidateProvider` にあり、将来の協調フィルタリングを差し込めます。詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
+QMDでは `Document = 1冊`、`Query = 読者プロフィール + 今回の目的 + 推薦意図` です。Likely to Love、Easy to Continue、Broaden Your Worldを別々に検索してから、既読・拒否済み候補の除外と多様性制約を適用します。QMDへ索引するのは運営側の推薦カタログと、Google Booksから取得した公開書誌だけです。ユーザーが取り込んだ非公開の読書履歴そのものは検索文書にしません。候補Providerの共通契約は `RecommendationCandidateProvider` にあり、将来の協調フィルタリングを差し込めます。詳細は [docs/architecture.md](docs/architecture.md) を参照してください。
 
 ## 必要環境
 
@@ -103,6 +106,12 @@ BOOKTRAIL_QMD=1 bin/dev
 BOOKTRAIL_QMD=1 bin/jobs start
 ```
 
+Google Booksによる候補発見は既定で有効です。共有IPや無認証アクセスはHTTP 429になる場合があるため、継続利用では制限付きの `GOOGLE_BOOKS_API_KEY` を推奨します。キーは環境変数だけに置き、リポジトリへ保存しません。外部候補発見を完全に停止する場合は次のように起動します。
+
+```bash
+BOOKTRAIL_CATALOG_DISCOVERY=0 BOOKTRAIL_QMD=1 bin/dev
+```
+
 `qmd init` によりプロジェクトローカルの `.qmd/` にインデックスが作られます。このディレクトリと生成MarkdownはGit管理外です。書籍更新後は `bin/rails qmd:documents && qmd update && qmd embed` を実行します。Embeddingモデルを変えた場合、既存ベクトルに互換性がないため必ず再生成します。
 
 ```bash
@@ -136,17 +145,19 @@ CSV境界、ISBN、プロフィール重み、既読・フィードバック除�
 ## 外部データソース
 
 1. [openBD API](https://openbd.jp/) — ISBN書誌情報の第一候補
-2. [Google Books API](https://developers.google.com/books) — openBDで不足する説明・カテゴリ・ページ数の補完
+2. [Google Books API](https://developers.google.com/books/docs/v1/using) — openBDで不足する説明・カテゴリ・ページ数の補完、および未読候補の公開書誌検索
 3. ユーザー提供CSV — APIで補完できない場合
 
-API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウトします。同じISBNの結果はRails cacheへ30日保存します。Booklog全体のスクレイピングは行いません。
+ISBN書誌補完ではISBNだけを送信します。候補発見では、ユーザーが同意した場合に限り、プロフィール上位3著者を `inauthor:` 検索し、その公開結果から得た最大2カテゴリを `subject:` 検索します。評価、レビュー、コメント、Booklogタグ、プロフィール要約、書名一覧、生CSVは送信しません。検索文字列自体はDBへ保存せず、SHA-256ダイジェストと取得日時だけを保持します。成功した検索は30日、失敗した検索は1時間再送せず、HTTP 429を繰り返し発生させません。Google Booksの公開検索は最大40件を返せますが、Booktrailは1検索20件に制限し、検索間隔とHTTP 429の再試行を制御します。Booklog全体のスクレイピングは行いません。
 
 ## プライバシー
 
 - ユーザー本人がアップロードした履歴だけを使用し、アップロード原本は保存しません
 - ユーザーの読書履歴と運営側の推薦カタログをDB上で分離し、履歴の書籍はQMDへ索引しません
 - レビュー本文・コメントはMVPの推薦へ送りません
-- 外部書誌APIへ送るのはISBNだけです
+- ISBN書誌補完で外部APIへ送るのはISBNだけです
+- 候補発見を有効にした場合だけ、上位3著者名と公開書誌から派生した最大2カテゴリをGoogle Booksへ送ります
+- 候補発見には評価、レビュー、コメント、タグ、書名一覧、生CSVを送りません
 - QMDのEmbedding、Query Expansion、Rerankerはローカル実行でき、読書プロフィールを外部LLMへ送らずに済みます
 - プロフィール画面から履歴、プロフィール、推薦、フィードバックを削除できます
 - 将来の匿名集計や協調フィルタリングには別途明示的な同意が必要です
@@ -160,6 +171,7 @@ API呼出しはISBNだけを送り、接続・読取とも4秒でタイムアウ
 - QMD CLI JSONの `--explain` 項目はバージョン差を許容し、欠落値は開発者画面で `—` と表示します
 - QMDモードはローカルモデルを同期実行するため、初回ダウンロード時やCPU環境では推薦生成に時間がかかります
 - 推薦はSolid Queueで非同期生成しますが、MVPでは進捗率ではなく pending／processing／completed／failed の状態表示です
+- Google Booksの検索品質とAPI割当に依存します。障害時は既存カタログだけで推薦を続行します
 - 書影URLは外部配信元に依存します。欠落時はローカルのプレースホルダーを表示します
 
 ## 将来の協調フィルタリング

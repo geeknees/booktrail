@@ -25,6 +25,7 @@ class RecommendationQueryBuilder
   def call
     sections = [
       "読者プロフィール: #{@profile.summary}",
+      preference_section,
       "今回の読書目的: #{GOAL_CONTEXTS.fetch(@goal, @goal)}",
       "推薦意図: #{INTENT_CONTEXTS.fetch(@intent, @intent)}",
       examples_section,
@@ -41,6 +42,14 @@ class RecommendationQueryBuilder
   end
 
   private
+
+  def preference_section
+    lines = []
+    lines << "推定される好み: #{@profile.favorite_topics.first(6).join('、')}" if @profile.favorite_topics.any?
+    lines << "よく読む著者: #{@profile.favorite_authors.first(5).join('、')}" if @profile.favorite_authors.any?
+    lines << "よく読むカテゴリ: #{@profile.preferred_categories.first(6).join('、')}" if @profile.preferred_categories.any?
+    lines.join("\n").presence
+  end
 
   def examples_section
     records = positive_records.first(EXAMPLE_LIMIT)

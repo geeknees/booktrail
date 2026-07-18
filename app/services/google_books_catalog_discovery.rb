@@ -17,11 +17,11 @@ class GoogleBooksCatalogDiscovery
 
   def call
     author_volumes = @profile.favorite_authors.first(AUTHOR_LIMIT).flat_map do |author|
-      fetch(%(inauthor:"#{sanitize(author)}"))
+      fetch("inauthor:#{sanitize(author)}")
     end
     subjects = author_volumes.flat_map { |volume| Array(volume.dig("volumeInfo", "categories")) }
       .compact_blank.tally.sort_by { |name, count| [ -count, name ] }.first(SUBJECT_LIMIT).map(&:first)
-    subject_volumes = subjects.flat_map { |subject| fetch(%(subject:"#{sanitize(subject)}")) }
+    subject_volumes = subjects.flat_map { |subject| fetch("subject:#{sanitize(subject)}") }
     updated = (author_volumes + subject_volumes).uniq { |volume| isbn_for(volume) }.count { |volume| persist(volume) }
 
     Result.new(updated_books: updated, external_queries: @external_queries.to_i)
@@ -30,7 +30,7 @@ class GoogleBooksCatalogDiscovery
   private
 
   def fetch(query)
-    digest = Digest::SHA256.hexdigest("v1\0key=#{ENV['GOOGLE_BOOKS_API_KEY'].present?}\0ja\0#{query}")
+    digest = Digest::SHA256.hexdigest("v2\0key=#{ENV['GOOGLE_BOOKS_API_KEY'].present?}\0ja\0#{query}")
     cached = CatalogDiscoveryQuery.find_by(query_digest: digest)
     return [] if fresh?(cached)
 

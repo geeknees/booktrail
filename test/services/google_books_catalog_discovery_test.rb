@@ -37,7 +37,7 @@ class GoogleBooksCatalogDiscoveryTest < ActiveSupport::TestCase
     result = GoogleBooksCatalogDiscovery.new(profile:, client:).call
 
     assert_operator result.updated_books, :>=, 2
-    assert_equal [ "inauthor:\"同意済み著者\"", "subject:\"Science Fiction\"" ], client.calls.pluck(:query)
+    assert_equal [ "inauthor:同意済み著者", "subject:Science Fiction" ], client.calls.pluck(:query)
     refute client.calls.any? { |call| call[:query].include?(profile.summary) }
     assert Book.find_by!(isbn: "9784152100009").recommendable?
     assert_equal "google_books_discovery", Book.find_by!(isbn: "9784152100016").metadata_source
